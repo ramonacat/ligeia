@@ -1,0 +1,7 @@
+[package]
+name = "ligeia"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+llvm-sys = { version = "201.0.1", features = [] }
