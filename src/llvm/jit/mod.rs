@@ -19,6 +19,7 @@ use super::module::BuiltModule;
 struct JITToken;
 
 static JIT_SETUP: LazyLock<JITToken> = LazyLock::new(|| {
+    // SAFETY: These functions don't really have any prerequsites, so they're fine to go
     unsafe {
         LLVMLinkInMCJIT();
         LLVM_InitializeNativeTarget();
@@ -40,8 +41,12 @@ impl Jit {
 
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();
+            // TODO: Can we just std::ptr::null_mut() instead?
+            // SAFETY: error is a pointer, so we effectively get a nullptr here
             let mut error = unsafe { std::mem::zeroed() };
 
+            // SAFETY: the `module` must be correctly initialized if it exists, engine and error
+            // are initialized by the called function
             if unsafe {
                 LLVMCreateExecutionEngineForModule(
                     engine.as_mut_ptr(),
@@ -51,9 +56,13 @@ impl Jit {
             } != 0
             {
                 assert!(!error.is_null());
+                // SAFETY: We've checked the `error` is not null, so it must be a valid CStr
+                // pointer
                 panic!("{:?}", unsafe { CStr::from_ptr(error) });
             }
 
+            // SAFETY: We have checked for errors above, so the pointer must point at an initialized
+            // execution engine
             unsafe { engine.assume_init() }
         };
 
@@ -68,6 +77,9 @@ impl Jit {
     pub(crate) unsafe fn get_function(&self, name: &str) -> unsafe extern "C" fn() {
         let name = CString::from_str(name).unwrap();
 
+        // SAFETY: We have a valid `execution_engine`, valid null-terminated name. The function
+        // must exist. We transmute the pointer into a generic fn() one, which must be further
+        // transmuted by the callee to match the function signature
         unsafe {
             let function_address = LLVMGetFunctionAddress(self.execution_engine, name.as_ptr());
             std::mem::transmute(usize::try_from(function_address).unwrap())
@@ -77,6 +89,8 @@ impl Jit {
 
 impl Drop for Jit {
     fn drop(&mut self) {
+        // SAFETY: If Jit is dropped, then nobody should be executing any JITted code anymore, so
+        // we are free to drop it.
         unsafe { LLVMDisposeExecutionEngine(self.execution_engine) };
     }
 }

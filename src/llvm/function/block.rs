@@ -14,6 +14,7 @@ pub struct FunctionBlock<'function, 'module> {
 impl<'function, 'module> FunctionBlock<'function, 'module> {
     pub fn new(function: &'function FunctionBuilder<'module>, name: &str) -> Self {
         let name = CString::from_str(name).unwrap();
+        // SAFETY: we know the function is a valid ref and name is a valid null-terminated C-string
         let block = unsafe { LLVMAppendBasicBlock(function.as_llvm_ref(), name.as_ptr()) };
         Self { function, block }
     }

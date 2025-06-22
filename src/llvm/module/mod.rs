@@ -17,6 +17,8 @@ impl Module {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
+            // SAFETY: The `name` is a valid null-terminated string, and we have a reference to
+            // context, so the one returned from `as_llvm_ref` must be valid
             unsafe {
                 LLVMModuleCreateWithNameInContext(name.as_ptr().cast(), context.as_llvm_ref())
             }
@@ -37,11 +39,16 @@ impl Module {
     ) {
         let builder = FunctionBuilder::new(self, name, r#type);
 
+        // TODO we should probably pass the builder by ref, so that we can then actually ask it to
+        // verify that all blocks got built with at least a terminator
         implement(builder);
     }
 
     pub(crate) fn build(mut self) -> BuiltModule {
         let mut out_message = std::ptr::null_mut();
+        // SAFETY: We have a valid, non-null `reference`, and since the action is
+        // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
+        // we'll get a new pointer put into there
         unsafe {
             LLVMVerifyModule(
                 self.reference,
@@ -50,6 +57,7 @@ impl Module {
             )
         };
 
+        // SAFETY: We have a valid, non-null `reference`, so this function can't fail
         unsafe { LLVMDumpModule(self.reference) };
 
         let Self { reference } = self;
@@ -66,6 +74,7 @@ impl Drop for Module {
             return;
         }
 
+        // SAFETY: if `reference` is not null, we own the module and are free to dispose it
         unsafe { LLVMDisposeModule(self.reference) };
     }
 }
@@ -89,6 +98,8 @@ impl Drop for BuiltModule {
             return;
         }
 
+        // SAFETY: We own the module, we're free to dispose of it, everyone who depends on it should have a
+        // reference to this `BuiltModule` or take ownership with `into_llvm_ref`
         unsafe { LLVMDisposeModule(self.reference) };
     }
 }

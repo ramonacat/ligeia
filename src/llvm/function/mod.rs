@@ -25,6 +25,8 @@ impl<'module> FunctionBuilder<'module> {
         let name = CString::from_str(name).unwrap();
 
         let function =
+        // SAFETY: The module is a valid module, the name is a null terminated string, and the type
+        // exists for the duration of the call, so we're safe
             unsafe { LLVMAddFunction(module.as_llvm_ref(), name.as_ptr(), r#type.as_llvm_ref()) };
 
         Self {
@@ -51,8 +53,14 @@ impl<'module> FunctionBuilder<'module> {
         // TODO figure out what's wrong with this assert
         // assert!(argument_type.type_id() == TypeId::of::<TType>());
 
+        // SAFETY: We've ensured that the `index` is not out-of-bounds above, `function` must point
+        // at a correct function value
         let argument = unsafe { LLVMGetParam(self.function, index) };
 
+        // SAFETY: We know that the type of the argument matches the type of the Value, so this is
+        // correct and safe
+        // TODO: Should this constructor even be unsafe? It can create an incorrect Value, but
+        // memory-safety-wise should be fine
         Some(unsafe { Value::new(argument) })
     }
 }

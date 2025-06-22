@@ -1,4 +1,10 @@
-#![deny(clippy::all, clippy::pedantic, clippy::nursery, warnings)]
+#![deny(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::undocumented_unsafe_blocks,
+    warnings
+)]
 
 use llvm::{jit::Jit, module::Module, types};
 
@@ -23,6 +29,9 @@ fn main() {
                     "add",
                 );
 
+                // TODO we should require a return here, the funcs that do terminators should
+                // return some TerminatorToken or something, to avoid creating avoidably incorrect
+                // IR
                 i.r#return(&sum);
             });
         },
@@ -34,10 +43,12 @@ fn main() {
 
     // TODO would be cool to have a way to refer to functions by some reference, but the change of
     // Module into BuiltModule is making that kinda hard
-    let callable: unsafe extern "C" fn(u64) -> u64 =
+    // SAFETY: The signature matches the signature of the declaration, and (hopefully) the JITted
+    // code is safe
+    let callable: extern "C" fn(u64) -> u64 =
         unsafe { std::mem::transmute(jit.get_function("main")) };
 
-    let result = unsafe { callable(12) };
+    let result = callable(12);
 
     println!("Result: {result}");
 }

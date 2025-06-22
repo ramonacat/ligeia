@@ -19,6 +19,9 @@ impl FunctionType {
         let mut param_types: Vec<LLVMTypeRef> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
 
         Self {
+            // SAFETY: This constructor needs it parameters alive only while it's being executed,
+            // and we can guarantee that both `r#return` and `param_types` won't be dropped until
+            // end of scope
             reference: unsafe {
                 LLVMFunctionType(
                     r#return.as_llvm_ref(),

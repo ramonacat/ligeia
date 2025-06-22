@@ -28,6 +28,9 @@ impl Type for IntegerType {
 impl IntegerType {
     pub fn new(factory: unsafe extern "C" fn(LLVMContextRef) -> LLVMTypeRef) -> Self {
         Self {
+            // SAFETY: The factory functions create types that only depend on the context, and we
+            // keep a PhantomData reference to the context, so it won't be destroyed before the
+            // types get dropped
             reference: LLVM_CONTEXT.with(|context| unsafe { factory(context.as_llvm_ref()) }),
             _phantom: PhantomData,
         }
@@ -44,6 +47,8 @@ impl Type for U64 {
 
 impl U64 {
     pub fn const_value(value: u64) -> Value<Self> {
+        // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
+        // will be valid
         U64_ID.with(|r#type| unsafe { Value::new(LLVMConstInt(r#type.as_llvm_ref(), value, 0)) })
     }
 }
