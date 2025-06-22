@@ -1,81 +1,43 @@
 #![deny(clippy::all, clippy::pedantic, clippy::nursery, warnings)]
 
-use std::{ffi::CStr, mem::MaybeUninit};
+use llvm::{jit::Jit, module::Module, types};
 
-use llvm_sys::{
-    analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
-    core::{
-        LLVMAddFunction, LLVMAppendBasicBlock, LLVMBuildAdd, LLVMBuildRet, LLVMConstInt,
-        LLVMContextCreate, LLVMCreateBuilderInContext, LLVMDisposeBuilder, LLVMDumpModule,
-        LLVMFunctionType, LLVMGetParam, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext,
-        LLVMPositionBuilderAtEnd,
-    },
-    execution_engine::{
-        LLVMCreateExecutionEngineForModule, LLVMGetFunctionAddress, LLVMLinkInMCJIT,
-    },
-    target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
-};
+mod llvm;
 
 fn main() {
-    unsafe {
-        let context = LLVMContextCreate();
-        let u64_type = LLVMInt64TypeInContext(context);
-        let module = LLVMModuleCreateWithNameInContext(c"main".as_ptr().cast(), context);
-        let builder = LLVMCreateBuilderInContext(context);
+    let main_module = Module::new("main");
+    main_module.define_function(
+        "main",
+        types::function::FunctionType::new(
+            &types::integer::U64,
+            Box::new([Box::new(types::integer::U64)]),
+        ),
+        |function| {
+            let entry = function.create_block("entry");
 
-        let mut param_types = [u64_type];
-        let function_type = LLVMFunctionType(
-            u64_type,
-            param_types.as_mut_ptr(),
-            u32::try_from(param_types.len()).unwrap(),
-            0,
-        );
-        let function = LLVMAddFunction(module, c"main".as_ptr().cast(), function_type);
+            entry.build(|i| {
+                let base = types::integer::U64::const_value(32);
+                let sum = i.add(
+                    &base,
+                    &function.get_argument::<types::integer::U64>(0).unwrap(),
+                    "add",
+                );
 
-        let entry = LLVMAppendBasicBlock(function, c"entry".as_ptr().cast());
-        LLVMPositionBuilderAtEnd(builder, entry);
+                i.r#return(&sum);
+            });
+        },
+    );
 
-        let value = LLVMConstInt(u64_type, 32, 0);
-        let sum = LLVMBuildAdd(
-            builder,
-            value,
-            LLVMGetParam(function, 0),
-            c"sum".as_ptr().cast(),
-        );
-        LLVMBuildRet(builder, sum);
+    let built_module = main_module.build();
 
-        LLVMDisposeBuilder(builder);
+    let jit = Jit::new(built_module);
 
-        let mut out_message = std::ptr::null_mut();
-        LLVMVerifyModule(
-            module,
-            LLVMVerifierFailureAction::LLVMAbortProcessAction,
-            &mut out_message,
-        );
+    // TODO would be cool to have a way to refer to functions by some reference, but the change of
+    // Module into BuiltModule is making that kinda hard
+    let callable: unsafe extern "C" fn(u64) -> u64 =
+        unsafe { std::mem::transmute(jit.get_function("main")) };
 
-        LLVMDumpModule(module);
+    let result = unsafe { callable(12) };
 
-        LLVMLinkInMCJIT();
-        LLVM_InitializeNativeTarget();
-        LLVM_InitializeNativeAsmPrinter();
-
-        let execution_engine = {
-            let mut engine = MaybeUninit::uninit();
-            let mut error = std::mem::zeroed();
-
-            if LLVMCreateExecutionEngineForModule(engine.as_mut_ptr(), module, &mut error) != 0 {
-                assert!(!error.is_null());
-                panic!("{:?}", CStr::from_ptr(error));
-            }
-
-            engine.assume_init()
-        };
-
-        let main = LLVMGetFunctionAddress(execution_engine, c"main".as_ptr().cast());
-        let callable_main: extern "C" fn(u64) -> u64 = std::mem::transmute(main);
-
-        let result = callable_main(12);
-
-        println!("::: {result}");
-    }
+    println!("Result: {result}");
 }
