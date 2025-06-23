@@ -5,7 +5,7 @@ use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use block::FunctionBlock;
 use llvm_sys::{
-    core::{LLVMAddFunction, LLVMGetParam},
+    core::{LLVMAddFunction, LLVMGetParam, LLVMTypeOf},
     prelude::LLVMValueRef,
 };
 
@@ -48,14 +48,14 @@ impl<'module> FunctionBuilder<'module> {
     }
 
     pub(crate) fn get_argument<TType: Type + 'static>(&self, index: u32) -> Option<Value<TType>> {
-        let _argument_type = self.r#type.get_argument(index as usize)?;
+        let argument_type = self.r#type.get_argument(index as usize)?;
 
-        // TODO figure out what's wrong with this assert
-        // assert!(argument_type.type_id() == TypeId::of::<TType>());
-
-        // SAFETY: We've ensured that the `index` is not out-of-bounds above, `function` must point
-        // at a correct function value
+        // SAFETY: We've ensured that the `index` is not out-of-bounds while getting the argument
+        // type, and self.function is a valid reference to the function
         let argument = unsafe { LLVMGetParam(self.function, index) };
+
+        // SAFETY: We've ensured LLVMGetParam got correct arguments, so `argument` must be valid
+        assert!(argument_type.as_llvm_ref() == unsafe { LLVMTypeOf(argument) });
 
         // SAFETY: We know that the type of the argument matches the type of the Value, so this is
         // correct and safe

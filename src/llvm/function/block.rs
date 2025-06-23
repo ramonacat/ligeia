@@ -2,7 +2,10 @@ use std::{ffi::CString, str::FromStr};
 
 use llvm_sys::core::LLVMAppendBasicBlock;
 
-use super::{instruction_builder::{InstructionBuilder, TerminatorToken}, FunctionBuilder};
+use super::{
+    FunctionBuilder,
+    instruction_builder::{InstructionBuilder, TerminatorToken},
+};
 
 // TODO should we implement drop for this at all?
 pub struct FunctionBlock<'function, 'module> {

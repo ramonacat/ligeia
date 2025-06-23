@@ -12,6 +12,7 @@ mod llvm;
 
 fn main() {
     let main_module = Module::new("main");
+
     main_module.define_function(
         "main",
         types::function::FunctionType::new(
