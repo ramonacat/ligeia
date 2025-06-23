@@ -14,16 +14,8 @@ use crate::llvm::{
     types::{integer::U64, value::Value},
 };
 
-/// This struct has a field, so it cannot be constructed by everyone, even though it's public, and
-/// the constructor's visibility decides who can construct it.
-/// TODO: Is there a less awkward way to express those visibility requirements?
-pub struct TerminatorToken(());
-
-impl TerminatorToken {
-    pub(in crate::llvm) fn new() -> Self {
-        TerminatorToken(())
-    }
-}
+#[non_exhaustive]
+pub struct TerminatorToken;
 
 pub struct InstructionBuilder<'function, 'module> {
     builder: LLVMBuilderRef,
@@ -64,7 +56,7 @@ impl<'function, 'module> InstructionBuilder<'function, 'module> {
         // duration of the call, so we're good
         unsafe { LLVMBuildRet(self.builder, sum.as_llvm_ref()) };
 
-        TerminatorToken::new()
+        TerminatorToken
     }
 }
 
