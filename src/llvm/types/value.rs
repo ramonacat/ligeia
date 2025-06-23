@@ -8,6 +8,7 @@ pub struct Value<T: Type> {
     reference: LLVMValueRef,
     _phantom: PhantomData<Box<T>>,
 }
+
 impl<T: Type> Value<T> {
     pub(in crate::llvm) const unsafe fn new(value: *mut llvm_sys::LLVMValue) -> Self {
         Self {

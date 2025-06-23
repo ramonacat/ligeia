@@ -1,3 +1,5 @@
+pub mod function;
+
 use std::{
     ffi::{CStr, CString},
     mem::MaybeUninit,
@@ -5,6 +7,7 @@ use std::{
     sync::LazyLock,
 };
 
+use function::JitFunction;
 use llvm_sys::{
     execution_engine::{
         LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine, LLVMExecutionEngineRef,
@@ -72,7 +75,7 @@ impl Jit {
 
     // TODO would be cool to genericise over the function type, instead of forcing the callee to
     // cast
-    pub(crate) unsafe fn get_function(&self, name: &str) -> unsafe extern "C" fn() {
+    pub(crate) unsafe fn get_function<TFunction>(&self, name: &str) -> JitFunction<TFunction> {
         let name = CString::from_str(name).unwrap();
 
         // SAFETY: We have a valid `execution_engine`, valid null-terminated name. The function
@@ -80,7 +83,7 @@ impl Jit {
         // transmuted by the callee to match the function signature
         unsafe {
             let function_address = LLVMGetFunctionAddress(self.execution_engine, name.as_ptr());
-            std::mem::transmute(usize::try_from(function_address).unwrap())
+            JitFunction::new(usize::try_from(function_address).unwrap())
         }
     }
 }

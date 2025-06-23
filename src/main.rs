@@ -6,7 +6,11 @@
     warnings
 )]
 
-use llvm::{jit::Jit, module::Module, types};
+use llvm::{
+    jit::{Jit, function::JitFunction},
+    module::Module,
+    types,
+};
 
 mod llvm;
 
@@ -39,14 +43,13 @@ fn main() {
 
     let jit = Jit::new(built_module);
 
-    // TODO would be cool to have a way to refer to functions by some reference, but the change of
-    // Module into BuiltModule is making that kinda hard
-    // SAFETY: The signature matches the signature of the declaration, and (hopefully) the JITted
-    // code is safe
-    let callable: extern "C" fn(u64) -> u64 =
-        unsafe { std::mem::transmute(jit.get_function("main")) };
+    // SAFETY: The signature matches the signature of the declaration
+    let callable: JitFunction<unsafe extern "C" fn(u64) -> u64> =
+        unsafe { jit.get_function("main") };
 
-    let result = callable(12);
+    // SAFETY: The JITted code is correct and memory safe, right? I'm sure there aren't any bugs
+    // lurking
+    let result = unsafe { callable.call(12) };
 
     println!("Result: {result}");
 }

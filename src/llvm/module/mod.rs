@@ -35,13 +35,13 @@ impl Module {
         &self,
         name: &str,
         r#type: types::function::FunctionType,
-        implement: impl FnOnce(FunctionBuilder),
+        implement: impl FnOnce(&FunctionBuilder),
     ) {
         let builder = FunctionBuilder::new(self, name, r#type);
 
         // TODO we should probably pass the builder by ref, so that we can then actually ask it to
         // verify that all blocks got built with at least a terminator
-        implement(builder);
+        implement(&builder);
     }
 
     pub(crate) fn build(mut self) -> BuiltModule {
