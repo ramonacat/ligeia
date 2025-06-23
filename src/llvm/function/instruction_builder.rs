@@ -1,4 +1,4 @@
-use std::{ffi::CString, str::FromStr};
+use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use llvm_sys::{
     core::{
@@ -19,8 +19,7 @@ pub struct TerminatorToken;
 
 pub struct InstructionBuilder<'function, 'module> {
     builder: LLVMBuilderRef,
-    #[allow(unused)] // TODO should this be PhantomData?
-    block: &'function FunctionBlock<'function, 'module>,
+    _phantom: PhantomData<&'function FunctionBlock<'function, 'module>>,
 }
 
 impl<'function, 'module> InstructionBuilder<'function, 'module> {
@@ -31,7 +30,10 @@ impl<'function, 'module> InstructionBuilder<'function, 'module> {
         // SAFETY: we've just constructed the builder so it's valid, the block also must be
         unsafe { LLVMPositionBuilderAtEnd(builder, block.as_llvm_ref()) };
 
-        Self { builder, block }
+        Self {
+            builder,
+            _phantom: PhantomData,
+        }
     }
 
     pub(crate) fn add(&self, left: &Value<U64>, right: &Value<U64>, name: &str) -> Value<U64> {
