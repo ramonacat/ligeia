@@ -1,4 +1,4 @@
-use std::{ffi::CString, str::FromStr};
+use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use llvm_sys::core::LLVMAppendBasicBlock;
 
@@ -7,10 +7,8 @@ use super::{
     instruction_builder::{InstructionBuilder, TerminatorToken},
 };
 
-// TODO should we implement drop for this at all?
 pub struct FunctionBlock<'function, 'module> {
-    #[allow(unused)] // TODO should this be PhantomData?
-    function: &'function FunctionBuilder<'module>,
+    _phantom: PhantomData<&'function FunctionBuilder<'module>>,
     block: *mut llvm_sys::LLVMBasicBlock,
 }
 
@@ -19,7 +17,10 @@ impl<'function, 'module> FunctionBlock<'function, 'module> {
         let name = CString::from_str(name).unwrap();
         // SAFETY: we know the function is a valid ref and name is a valid null-terminated C-string
         let block = unsafe { LLVMAppendBasicBlock(function.as_llvm_ref(), name.as_ptr()) };
-        Self { function, block }
+        Self {
+            _phantom: PhantomData,
+            block,
+        }
     }
 
     pub fn build(&self, build: impl FnOnce(InstructionBuilder) -> TerminatorToken) {

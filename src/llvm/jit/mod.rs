@@ -73,8 +73,6 @@ impl Jit {
         }
     }
 
-    // TODO would be cool to genericise over the function type, instead of forcing the callee to
-    // cast
     pub(crate) unsafe fn get_function<TFunction>(&self, name: &str) -> JitFunction<TFunction> {
         let name = CString::from_str(name).unwrap();
 

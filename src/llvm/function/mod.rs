@@ -59,8 +59,6 @@ impl<'module> FunctionBuilder<'module> {
 
         // SAFETY: We know that the type of the argument matches the type of the Value, so this is
         // correct and safe
-        // TODO: Should this constructor even be unsafe? It can create an incorrect Value, but
-        // memory-safety-wise should be fine
         Some(unsafe { Value::new(argument) })
     }
 }
