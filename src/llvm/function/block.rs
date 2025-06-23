@@ -2,7 +2,7 @@ use std::{ffi::CString, str::FromStr};
 
 use llvm_sys::core::LLVMAppendBasicBlock;
 
-use super::{FunctionBuilder, instruction_builder::InstructionBuilder};
+use super::{instruction_builder::{InstructionBuilder, TerminatorToken}, FunctionBuilder};
 
 // TODO should we implement drop for this at all?
 pub struct FunctionBlock<'function, 'module> {
@@ -19,7 +19,7 @@ impl<'function, 'module> FunctionBlock<'function, 'module> {
         Self { function, block }
     }
 
-    pub fn build(&self, build: impl FnOnce(InstructionBuilder)) {
+    pub fn build(&self, build: impl FnOnce(InstructionBuilder) -> TerminatorToken) {
         let instruction_builder = InstructionBuilder::new(self);
 
         build(instruction_builder);

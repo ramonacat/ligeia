@@ -29,10 +29,7 @@ fn main() {
                     "add",
                 );
 
-                // TODO we should require a return here, the funcs that do terminators should
-                // return some TerminatorToken or something, to avoid creating avoidably incorrect
-                // IR
-                i.r#return(&sum);
+                i.r#return(&sum)
             });
         },
     );
