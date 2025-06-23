@@ -12,7 +12,6 @@ thread_local! {
     static U64_ID:IntegerType = IntegerType::new(LLVMInt64TypeInContext);
 }
 
-//TODO research if we should implement drop
 #[derive(Clone, Copy)]
 struct IntegerType {
     reference: LLVMTypeRef,

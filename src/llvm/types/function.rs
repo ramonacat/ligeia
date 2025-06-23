@@ -2,7 +2,6 @@ use llvm_sys::{core::LLVMFunctionType, prelude::LLVMTypeRef};
 
 use super::Type;
 
-// TODO research if we should implement drop and dispose of the LLVMTypeRef
 pub struct FunctionType {
     reference: LLVMTypeRef,
     arguments: Box<[Box<dyn Type>]>,

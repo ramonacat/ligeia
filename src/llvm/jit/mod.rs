@@ -41,9 +41,7 @@ impl Jit {
 
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();
-            // TODO: Can we just std::ptr::null_mut() instead?
-            // SAFETY: error is a pointer, so we effectively get a nullptr here
-            let mut error = unsafe { std::mem::zeroed() };
+            let mut error = std::ptr::null_mut();
 
             // SAFETY: the `module` must be correctly initialized if it exists, engine and error
             // are initialized by the called function
