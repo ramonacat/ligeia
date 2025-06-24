@@ -7,19 +7,19 @@ use llvm_sys::{
 
 use super::block::FunctionBlock;
 use crate::llvm::{
-    module::Module,
+    module::ModuleBuilder,
     types::{self, Type, value::Value},
 };
 
 pub struct FunctionBuilder<'symbols, 'module> {
     function: LLVMValueRef,
     r#type: types::function::FunctionType,
-    module: &'module Module<'symbols>,
+    module: &'module ModuleBuilder<'symbols>,
 }
 
 impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
     pub fn new(
-        module: &'module Module<'symbols>,
+        module: &'module ModuleBuilder<'symbols>,
         name: &str,
         r#type: types::function::FunctionType,
     ) -> Self {
@@ -63,11 +63,12 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
         Some(unsafe { Value::new(argument) })
     }
 
+    // TODO This should
     pub(in crate::llvm) const fn build(&self) -> LLVMValueRef {
         self.function
     }
 
-    pub(crate) const fn module(&self) -> &Module<'symbols> {
+    pub(crate) const fn module(&self) -> &ModuleBuilder<'symbols> {
         self.module
     }
 }

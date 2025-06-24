@@ -10,13 +10,13 @@ use crate::llvm::function::Function;
 
 // TODO use it!
 #[allow(unused)]
-pub struct BuiltModule {
+pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
     functions: HashMap<FunctionId, Function>,
 }
 
-impl BuiltModule {
+impl Module {
     pub(crate) fn into_llvm_ref(mut self) -> *mut llvm_sys::LLVMModule {
         let result = self.reference;
         self.reference = std::ptr::null_mut();
@@ -51,7 +51,7 @@ impl BuiltModule {
     }
 }
 
-impl Drop for BuiltModule {
+impl Drop for Module {
     fn drop(&mut self) {
         if self.reference.is_null() {
             return;

@@ -11,7 +11,7 @@ use llvm_sys::{
 use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::llvm::{
     LLVM_CONTEXT,
-    module::{FunctionId, Module},
+    module::{FunctionId, ModuleBuilder},
     types::{integer::U64, value::Value},
 };
 
@@ -88,7 +88,7 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         TerminatorToken
     }
 
-    const fn module(&self) -> &Module<'symbols> {
+    const fn module(&self) -> &ModuleBuilder<'symbols> {
         self.function_builder.module()
     }
 }

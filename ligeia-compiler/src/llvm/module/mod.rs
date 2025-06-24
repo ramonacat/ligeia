@@ -2,7 +2,7 @@ pub mod built;
 
 use std::{collections::HashMap, ffi::CString, str::FromStr};
 
-use built::BuiltModule;
+use built::Module;
 use llvm_sys::{
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
@@ -22,14 +22,14 @@ pub struct ModuleId(GlobalSymbol);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FunctionId(ModuleId, GlobalSymbol);
 
-pub struct Module<'symbols> {
+pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
     reference: LLVMModuleRef,
     global_symbols: &'symbols mut GlobalSymbols,
     functions: HashMap<FunctionId, (LLVMValueRef, LLVMTypeRef)>,
 }
 
-impl<'symbols> Module<'symbols> {
+impl<'symbols> ModuleBuilder<'symbols> {
     pub fn new(global_symbols: &'symbols mut GlobalSymbols, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
@@ -75,7 +75,7 @@ impl<'symbols> Module<'symbols> {
         id
     }
 
-    pub(crate) fn build(mut self) -> BuiltModule {
+    pub(crate) fn build(mut self) -> Module {
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
         // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
@@ -95,7 +95,7 @@ impl<'symbols> Module<'symbols> {
         self.reference = std::ptr::null_mut();
 
         // SAFETY: We have ensured that the reference is not owned by this current object
-        unsafe { BuiltModule::new(self.id, reference, &self.functions) }
+        unsafe { Module::new(self.id, reference, &self.functions) }
     }
 
     pub(crate) fn get_function(&self, function: FunctionId) -> (LLVMValueRef, LLVMTypeRef) {
@@ -103,7 +103,7 @@ impl<'symbols> Module<'symbols> {
     }
 }
 
-impl Drop for Module<'_> {
+impl Drop for ModuleBuilder<'_> {
     fn drop(&mut self) {
         if self.reference.is_null() {
             return;
