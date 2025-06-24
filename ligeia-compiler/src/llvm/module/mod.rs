@@ -1,19 +1,36 @@
-use std::{ffi::CString, str::FromStr};
+pub mod built;
 
+use std::{collections::HashMap, ffi::CString, str::FromStr};
+
+use built::BuiltModule;
 use llvm_sys::{
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
-    prelude::LLVMModuleRef,
+    prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef},
 };
 
-use super::{LLVM_CONTEXT, function::FunctionBuilder, types};
+use super::{
+    LLVM_CONTEXT,
+    function::builder::FunctionBuilder,
+    global_symbol::{GlobalSymbol, GlobalSymbols},
+    types::{self, Type},
+};
 
-pub struct Module {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ModuleId(GlobalSymbol);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct FunctionId(ModuleId, GlobalSymbol);
+
+pub struct Module<'symbols> {
+    id: ModuleId,
     reference: LLVMModuleRef,
+    global_symbols: &'symbols mut GlobalSymbols,
+    functions: HashMap<FunctionId, (LLVMValueRef, LLVMTypeRef)>,
 }
 
-impl Module {
-    pub fn new(name: &str) -> Self {
+impl<'symbols> Module<'symbols> {
+    pub fn new(global_symbols: &'symbols mut GlobalSymbols, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
@@ -24,7 +41,12 @@ impl Module {
             }
         });
 
-        Self { reference: module }
+        Self {
+            reference: module,
+            id: ModuleId(global_symbols.intern(name)),
+            global_symbols,
+            functions: HashMap::new(),
+        }
     }
 
     pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMModuleRef {
@@ -32,16 +54,25 @@ impl Module {
     }
 
     pub(crate) fn define_function(
-        &self,
+        &mut self,
         name: &str,
         r#type: types::function::FunctionType,
         implement: impl FnOnce(&FunctionBuilder),
-    ) {
+    ) -> FunctionId {
+        let type_ref = r#type.as_llvm_ref();
         let builder = FunctionBuilder::new(self, name, r#type);
 
-        // TODO we should probably pass the builder by ref, so that we can then actually ask it to
+        // TODO we should probably ask the builder to
         // verify that all blocks got built with at least a terminator
         implement(&builder);
+
+        let function = builder.build();
+
+        let id = FunctionId(self.id, self.global_symbols.intern(name));
+
+        self.functions.insert(id, (function, type_ref));
+
+        id
     }
 
     pub(crate) fn build(mut self) -> BuiltModule {
@@ -60,46 +91,25 @@ impl Module {
         // SAFETY: We have a valid, non-null `reference`, so this function can't fail
         unsafe { LLVMDumpModule(self.reference) };
 
-        let Self { reference } = self;
-
+        let reference = self.reference;
         self.reference = std::ptr::null_mut();
 
-        BuiltModule { reference }
+        // SAFETY: We have ensured that the reference is not owned by this current object
+        unsafe { BuiltModule::new(self.id, reference, &self.functions) }
+    }
+
+    pub(crate) fn get_function(&self, function: FunctionId) -> (LLVMValueRef, LLVMTypeRef) {
+        *self.functions.get(&function).unwrap()
     }
 }
 
-impl Drop for Module {
+impl Drop for Module<'_> {
     fn drop(&mut self) {
         if self.reference.is_null() {
             return;
         }
 
         // SAFETY: if `reference` is not null, we own the module and are free to dispose it
-        unsafe { LLVMDisposeModule(self.reference) };
-    }
-}
-
-pub struct BuiltModule {
-    reference: LLVMModuleRef,
-}
-
-impl BuiltModule {
-    pub(crate) fn into_llvm_ref(mut self) -> *mut llvm_sys::LLVMModule {
-        let result = self.reference;
-        self.reference = std::ptr::null_mut();
-
-        result
-    }
-}
-
-impl Drop for BuiltModule {
-    fn drop(&mut self) {
-        if self.reference.is_null() {
-            return;
-        }
-
-        // SAFETY: We own the module, we're free to dispose of it, everyone who depends on it should have a
-        // reference to this `BuiltModule` or take ownership with `into_llvm_ref`
         unsafe { LLVMDisposeModule(self.reference) };
     }
 }

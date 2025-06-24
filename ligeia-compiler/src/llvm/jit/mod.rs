@@ -16,7 +16,7 @@ use llvm_sys::{
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
 
-use super::module::BuiltModule;
+use super::module::built::BuiltModule;
 
 #[derive(Clone, Copy)]
 struct JITToken;

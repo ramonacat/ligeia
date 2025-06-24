@@ -1,13 +1,24 @@
 use llvm::{
     jit::{Jit, function::JitFunction},
-    module::Module,
+    package::PackageBuilder,
     types,
 };
 
 mod llvm;
 
 fn main() {
-    let main_module = Module::new("main");
+    let mut package = PackageBuilder::new();
+    let mut main_module = package.add_module("main");
+
+    let other = main_module.define_function(
+        "other",
+        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
+        |function| {
+            let block = function.create_block("entry");
+
+            block.build(|i| i.r#return(&types::integer::U64::const_value(11)));
+        },
+    );
 
     main_module.define_function(
         "main",
@@ -26,7 +37,11 @@ fn main() {
                     "add",
                 );
 
-                i.r#return(&sum)
+                let value_from_other = i.direct_call(other, "calling_other");
+
+                let sum2 = i.add(&sum, &value_from_other, "add_again");
+
+                i.r#return(&sum2)
             });
         },
     );
