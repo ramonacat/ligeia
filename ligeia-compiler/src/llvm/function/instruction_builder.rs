@@ -12,7 +12,7 @@ use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::llvm::{
     LLVM_CONTEXT,
     module::{FunctionId, ModuleBuilder},
-    types::{integer::U64, value::Value},
+    types::{Type, integer::U64, value::Value},
 };
 
 #[non_exhaustive]
@@ -60,15 +60,15 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         let name = CString::from_str(name).unwrap();
         // TODO we should get the type together with the function, and also verify the return type
         // matches the expected one
-        let (function_value, function_type) = self.module().get_function(function);
+        let function = self.module().get_function(function);
         let mut arguments = vec![];
 
         // SAFETY: we ensured all the references are valid
         let result = unsafe {
             LLVMBuildCall2(
                 self.builder,
-                function_type,
-                function_value,
+                function.r#type().as_llvm_ref(),
+                function.value(),
                 arguments.as_mut_ptr(),
                 u32::try_from(arguments.len()).unwrap(),
                 name.as_ptr(),

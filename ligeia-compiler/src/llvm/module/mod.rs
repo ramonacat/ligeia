@@ -6,15 +6,16 @@ use built::Module;
 use llvm_sys::{
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
-    prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef},
+    prelude::{LLVMModuleRef, LLVMValueRef},
 };
 
 use super::{
-    LLVM_CONTEXT,
-    function::builder::FunctionBuilder,
-    global_symbol::{GlobalSymbol, GlobalSymbols},
-    types::{self, Type},
+    function::builder::{FunctionBuilder, FunctionReference}, global_symbol::{GlobalSymbol, GlobalSymbols}, types::{self, function::FunctionType}, LLVM_CONTEXT
 };
+
+pub (in crate::llvm) trait AnyModule {}
+impl AnyModule for ModuleBuilder<'_> {}
+impl AnyModule for Module {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ModuleId(GlobalSymbol);
@@ -26,7 +27,7 @@ pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
     reference: LLVMModuleRef,
     global_symbols: &'symbols mut GlobalSymbols,
-    functions: HashMap<FunctionId, (LLVMValueRef, LLVMTypeRef)>,
+    functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
 }
 
 impl<'symbols> ModuleBuilder<'symbols> {
@@ -59,7 +60,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         r#type: types::function::FunctionType,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> FunctionId {
-        let type_ref = r#type.as_llvm_ref();
+        let id = FunctionId(self.id, self.global_symbols.intern(name));
         let builder = FunctionBuilder::new(self, name, r#type);
 
         // TODO we should probably ask the builder to
@@ -68,9 +69,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
 
         let function = builder.build();
 
-        let id = FunctionId(self.id, self.global_symbols.intern(name));
-
-        self.functions.insert(id, (function, type_ref));
+        self.functions.insert(id, function);
 
         id
     }
@@ -94,12 +93,21 @@ impl<'symbols> ModuleBuilder<'symbols> {
         let reference = self.reference;
         self.reference = std::ptr::null_mut();
 
+        let mut functions = HashMap::new();
+        std::mem::swap(&mut functions, &mut self.functions);
+
         // SAFETY: We have ensured that the reference is not owned by this current object
-        unsafe { Module::new(self.id, reference, &self.functions) }
+        unsafe { Module::new(self.id, reference, functions) }
     }
 
-    pub(crate) fn get_function(&self, function: FunctionId) -> (LLVMValueRef, LLVMTypeRef) {
-        *self.functions.get(&function).unwrap()
+    pub(in crate::llvm) fn get_function(&self, function: FunctionId) -> FunctionReference {
+        let (value, r#type) = self.functions.get(&function).unwrap();
+
+        // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they
+        // belong to this module, so as long as the function reference has a life time at least
+        // equivalent to the lifetime of the Module, the value will remain valid
+        unsafe { FunctionReference::new(self, *value, r#type) }
+
     }
 }
 

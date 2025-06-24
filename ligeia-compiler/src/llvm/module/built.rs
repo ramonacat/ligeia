@@ -1,19 +1,16 @@
 use std::collections::HashMap;
 
-use llvm_sys::{
-    core::LLVMDisposeModule,
-    prelude::{LLVMModuleRef, LLVMTypeRef, LLVMValueRef},
-};
+use llvm_sys::{core::LLVMDisposeModule, prelude::{LLVMModuleRef, LLVMValueRef}};
 
 use super::{FunctionId, ModuleId};
-use crate::llvm::function::Function;
+use crate::llvm::{function::Function, types::function::FunctionType};
 
 // TODO use it!
 #[allow(unused)]
 pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
-    functions: HashMap<FunctionId, Function>,
+    functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
 }
 
 impl Module {
@@ -27,14 +24,8 @@ impl Module {
     pub(in crate::llvm) unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
-        functions: &HashMap<FunctionId, (LLVMValueRef, LLVMTypeRef)>,
+        functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
     ) -> Self {
-        let functions = functions
-            .iter()
-            // SAFETY: The caller must provide correct pairs of the value and type
-            .map(|(k, v)| (*k, unsafe { Function::new(v.0, v.1) }))
-            .collect();
-
         Self {
             id,
             reference,
@@ -44,10 +35,13 @@ impl Module {
 
     // TODO use it!
     #[allow(unused)]
-    pub fn get_function(&self, id: FunctionId) -> &Function {
+    pub fn get_function(&self, id: FunctionId) -> Function {
         assert!(id.0 == self.id);
 
-        self.functions.get(&id).unwrap()
+        let function = self.functions.get(&id).unwrap();
+
+        // SAFETY: We got a reference to the function in the HashMap, so it must be valid
+        unsafe { Function::new(self, function.0, &function.1) }
     }
 }
 

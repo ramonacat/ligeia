@@ -7,9 +7,34 @@ use llvm_sys::{
 
 use super::block::FunctionBlock;
 use crate::llvm::{
-    module::ModuleBuilder,
-    types::{self, Type, value::Value},
+    module::{AnyModule, ModuleBuilder},
+    types::{self, function::FunctionType, value::Value, Type},
 };
+
+pub(in crate::llvm) struct FunctionReference<'module> {
+    // TODO should this be PhantomData instead? we only care about the lifetime ATM
+    _module: &'module dyn AnyModule,
+    reference: LLVMValueRef,
+    r#type: &'module FunctionType,
+}
+
+impl<'module> FunctionReference<'module> {
+    pub(crate) unsafe fn new(
+        module: &'module dyn AnyModule,
+        reference: LLVMValueRef,
+        r#type: &'module FunctionType
+    ) -> Self {
+        Self { _module: module, reference, r#type }
+    }
+
+    pub(crate) fn r#type(&self) -> &FunctionType {
+        &self.r#type
+    }
+
+    pub(crate) fn value(&self) -> *mut llvm_sys::LLVMValue {
+        self.reference
+    }
+}
 
 pub struct FunctionBuilder<'symbols, 'module> {
     function: LLVMValueRef,
@@ -63,12 +88,11 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
         Some(unsafe { Value::new(argument) })
     }
 
-    // TODO This should
-    pub(in crate::llvm) const fn build(&self) -> LLVMValueRef {
-        self.function
+    pub(in crate::llvm) fn build(self) -> (LLVMValueRef, FunctionType) {
+        (self.function, self.r#type)
     }
 
-    pub(crate) const fn module(&self) -> &ModuleBuilder<'symbols> {
+    pub(crate) const fn module(&self) -> &'module ModuleBuilder<'symbols> {
         self.module
     }
 }

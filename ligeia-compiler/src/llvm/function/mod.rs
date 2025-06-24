@@ -1,20 +1,22 @@
-use llvm_sys::prelude::{LLVMTypeRef, LLVMValueRef};
+use super::module::built::Module;
 
 mod block;
 pub mod builder;
 mod instruction_builder;
 
-pub struct Function {
-    // TODO use it!
-    #[allow(unused)]
-    value: LLVMValueRef,
-    // TODO use it!
-    #[allow(unused)]
-    r#type: LLVMTypeRef,
+#[allow(unused)]
+pub struct Function<'module> {
+    module: &'module Module,
+    function: *mut llvm_sys::LLVMValue,
+    r#type: &'module super::types::function::FunctionType,
 }
 
-impl Function {
-    pub const unsafe fn new(value: LLVMValueRef, r#type: LLVMTypeRef) -> Self {
-        Self { value, r#type }
+impl<'module> Function<'module> {
+    pub(crate) fn new(
+        module: &'module Module,
+        function: *mut llvm_sys::LLVMValue,
+        r#type: &'module super::types::function::FunctionType
+    ) -> Self {
+        Self { module, function, r#type }
     }
 }
