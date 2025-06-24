@@ -1,8 +1,13 @@
-[package]
-name = "ligeia"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver="3"
+members = ["ligeia-compiler"]
 
-[dependencies]
-llvm-sys = { version = "201.0.1", features = [] }
-paste = "1.0.15"
+[workspace.lints.rust]
+warnings = "deny"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"
+nursery = "deny"
+undocumented_unsafe_blocks = "deny"
+

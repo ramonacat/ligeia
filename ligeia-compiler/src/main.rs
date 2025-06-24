@@ -1,11 +1,3 @@
-#![deny(
-    clippy::all,
-    clippy::pedantic,
-    clippy::nursery,
-    clippy::undocumented_unsafe_blocks,
-    warnings
-)]
-
 use llvm::{
     jit::{Jit, function::JitFunction},
     module::Module,
