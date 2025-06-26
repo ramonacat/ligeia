@@ -1,4 +1,5 @@
 use llvm::{
+    global_symbol::GlobalSymbols,
     jit::{Jit, function::JitFunction},
     package::PackageBuilder,
     types,
@@ -7,8 +8,9 @@ use llvm::{
 mod llvm;
 
 fn main() {
-    let mut package = PackageBuilder::new();
-    let mut main_module = package.add_module("main");
+    let symbols = GlobalSymbols::new();
+    let mut package = PackageBuilder::new(&symbols);
+    let main_module = package.add_module("main");
 
     let other = main_module.define_function(
         "other",
@@ -46,9 +48,9 @@ fn main() {
         },
     );
 
-    let built_module = main_module.build();
+    let built_package = package.build();
 
-    let jit = Jit::new(built_module);
+    let jit = Jit::new(built_package);
 
     // SAFETY: The signature matches the signature of the declaration
     let callable: JitFunction<unsafe extern "C" fn(u64) -> u64> =

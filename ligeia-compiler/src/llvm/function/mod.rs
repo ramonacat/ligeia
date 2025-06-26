@@ -1,3 +1,5 @@
+use llvm_sys::prelude::LLVMValueRef;
+
 use super::module::built::Module;
 
 mod block;
@@ -7,16 +9,20 @@ mod instruction_builder;
 #[allow(unused)]
 pub struct Function<'module> {
     module: &'module Module,
-    function: *mut llvm_sys::LLVMValue,
+    reference: LLVMValueRef,
     r#type: &'module super::types::function::FunctionType,
 }
 
 impl<'module> Function<'module> {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         module: &'module Module,
-        function: *mut llvm_sys::LLVMValue,
-        r#type: &'module super::types::function::FunctionType
+        reference: LLVMValueRef,
+        r#type: &'module super::types::function::FunctionType,
     ) -> Self {
-        Self { module, function, r#type }
+        Self {
+            module,
+            reference,
+            r#type,
+        }
     }
 }

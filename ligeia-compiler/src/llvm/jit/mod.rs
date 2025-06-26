@@ -16,7 +16,7 @@ use llvm_sys::{
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
 
-use super::module::built::Module;
+use super::package::Package;
 
 #[derive(Clone, Copy)]
 struct JITToken;
@@ -39,8 +39,9 @@ pub struct Jit {
 }
 
 impl Jit {
-    pub(crate) fn new(module: Module) -> Self {
+    pub(crate) fn new(package: Package) -> Self {
         let token = *JIT_SETUP;
+        let module = package.into_module();
 
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();

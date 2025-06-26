@@ -8,7 +8,7 @@ use llvm_sys::{
 use super::block::FunctionBlock;
 use crate::llvm::{
     module::{AnyModule, ModuleBuilder},
-    types::{self, function::FunctionType, value::Value, Type},
+    types::{self, Type, function::FunctionType, value::Value},
 };
 
 pub(in crate::llvm) struct FunctionReference<'module> {
@@ -22,16 +22,20 @@ impl<'module> FunctionReference<'module> {
     pub(crate) unsafe fn new(
         module: &'module dyn AnyModule,
         reference: LLVMValueRef,
-        r#type: &'module FunctionType
+        r#type: &'module FunctionType,
     ) -> Self {
-        Self { _module: module, reference, r#type }
+        Self {
+            _module: module,
+            reference,
+            r#type,
+        }
     }
 
-    pub(crate) fn r#type(&self) -> &FunctionType {
-        &self.r#type
+    pub(crate) const fn r#type(&self) -> &FunctionType {
+        self.r#type
     }
 
-    pub(crate) fn value(&self) -> *mut llvm_sys::LLVMValue {
+    pub(crate) const fn value(&self) -> LLVMValueRef {
         self.reference
     }
 }

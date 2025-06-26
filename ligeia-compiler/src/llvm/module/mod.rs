@@ -10,10 +10,13 @@ use llvm_sys::{
 };
 
 use super::{
-    function::builder::{FunctionBuilder, FunctionReference}, global_symbol::{GlobalSymbol, GlobalSymbols}, types::{self, function::FunctionType}, LLVM_CONTEXT
+    LLVM_CONTEXT,
+    function::builder::{FunctionBuilder, FunctionReference},
+    global_symbol::{GlobalSymbol, GlobalSymbols},
+    types::{self, function::FunctionType},
 };
 
-pub (in crate::llvm) trait AnyModule {}
+pub(in crate::llvm) trait AnyModule {}
 impl AnyModule for ModuleBuilder<'_> {}
 impl AnyModule for Module {}
 
@@ -26,12 +29,12 @@ pub struct FunctionId(ModuleId, GlobalSymbol);
 pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
     reference: LLVMModuleRef,
-    global_symbols: &'symbols mut GlobalSymbols,
+    global_symbols: &'symbols GlobalSymbols,
     functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
 }
 
 impl<'symbols> ModuleBuilder<'symbols> {
-    pub fn new(global_symbols: &'symbols mut GlobalSymbols, name: &str) -> Self {
+    pub fn new(global_symbols: &'symbols GlobalSymbols, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
@@ -107,7 +110,6 @@ impl<'symbols> ModuleBuilder<'symbols> {
         // belong to this module, so as long as the function reference has a life time at least
         // equivalent to the lifetime of the Module, the value will remain valid
         unsafe { FunctionReference::new(self, *value, r#type) }
-
     }
 }
 

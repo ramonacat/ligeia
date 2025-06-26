@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use llvm_sys::{core::LLVMDisposeModule, prelude::{LLVMModuleRef, LLVMValueRef}};
+use llvm_sys::{
+    core::LLVMDisposeModule,
+    linker::LLVMLinkModules2,
+    prelude::{LLVMModuleRef, LLVMValueRef},
+};
 
 use super::{FunctionId, ModuleId};
 use crate::llvm::{function::Function, types::function::FunctionType};
@@ -21,7 +25,7 @@ impl Module {
         result
     }
 
-    pub(in crate::llvm) unsafe fn new(
+    pub(in crate::llvm) const unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
         functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
@@ -42,6 +46,15 @@ impl Module {
 
         // SAFETY: We got a reference to the function in the HashMap, so it must be valid
         unsafe { Function::new(self, function.0, &function.1) }
+    }
+
+    pub(crate) fn link(&self, mut module: Self) {
+        let reference = module.reference;
+        module.reference = std::ptr::null_mut();
+        // TODO handle errors
+        // SAFETY: if the Module object exists, the reference must be valid, and we're consuming
+        // the linked-in Module, so nobody can use that reference anymore
+        unsafe { LLVMLinkModules2(self.reference, reference) };
     }
 }
 
