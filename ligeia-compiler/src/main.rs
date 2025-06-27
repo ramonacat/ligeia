@@ -10,7 +10,27 @@ mod llvm;
 fn main() {
     let symbols = GlobalSymbols::new();
     let mut package = PackageBuilder::new(&symbols);
+
+    let side_module = package.add_module("side");
+
+    side_module.define_function(
+        "side_fn",
+        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
+        |function| {
+            let block = function.create_block("entry");
+
+            block.build(|i| i.r#return(&types::integer::U64::const_value(7)));
+        },
+    );
+
     let main_module = package.add_module("main");
+
+    // TODO this should really take just the ID from the original module, which already should
+    // contain a reference to the type (stored in some global function store)
+    let side = main_module.import_function(
+        "side_fn",
+        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
+    );
 
     let other = main_module.define_function(
         "other",
@@ -43,7 +63,11 @@ fn main() {
 
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
 
-                i.r#return(&sum2)
+                let value_from_side = i.direct_call(side, "cross_module");
+
+                let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
+
+                i.r#return(&sum3)
             });
         },
     );

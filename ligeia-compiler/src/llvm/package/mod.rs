@@ -32,6 +32,7 @@ where
             .into_iter()
             .map(ModuleBuilder::build)
             .collect::<Vec<_>>();
+
         let final_module = built_modules
             .pop()
             .expect("package should contain at least a single module");

@@ -5,7 +5,7 @@ use std::{collections::HashMap, ffi::CString, str::FromStr};
 use built::Module;
 use llvm_sys::{
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
-    core::{LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
+    core::{LLVMAddFunction, LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
 
@@ -13,7 +13,7 @@ use super::{
     LLVM_CONTEXT,
     function::builder::{FunctionBuilder, FunctionReference},
     global_symbol::{GlobalSymbol, GlobalSymbols},
-    types::{self, function::FunctionType},
+    types::{self, Type, function::FunctionType},
 };
 
 pub(in crate::llvm) trait AnyModule {}
@@ -73,6 +73,21 @@ impl<'symbols> ModuleBuilder<'symbols> {
         let function = builder.build();
 
         self.functions.insert(id, function);
+
+        id
+    }
+
+    pub(crate) fn import_function(&mut self, name: &str, r#type: FunctionType) -> FunctionId {
+        let c_name = CString::from_str(name).unwrap();
+
+        let function =
+            // SAFETY: All the passed values come from objects which uphold guarantees about the
+            // pointers being valid
+            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), r#type.as_llvm_ref()) };
+
+        let id = FunctionId(self.id, self.global_symbols.intern(name));
+
+        self.functions.insert(id, (function, r#type));
 
         id
     }

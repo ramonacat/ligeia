@@ -35,7 +35,7 @@ impl<'module> FunctionReference<'module> {
         self.r#type
     }
 
-    pub(crate) const fn value(&self) -> LLVMValueRef {
+    pub(in crate::llvm) const fn value(&self) -> LLVMValueRef {
         self.reference
     }
 }
