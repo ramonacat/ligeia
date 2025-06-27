@@ -61,6 +61,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         self.reference
     }
 
+    // TODO support setting linkage (export, internal, etc.)
     pub(crate) fn define_function(
         &mut self,
         name: &str,
@@ -85,6 +86,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         id
     }
 
+    // TODO verify that the other module actually exports the function
     pub(crate) fn import_function(&mut self, id: FunctionId) -> FunctionId {
         assert!(id.module_id != self.id);
 
@@ -112,6 +114,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         // SAFETY: We have a valid, non-null `reference`, and since the action is
         // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
         // we'll get a new pointer put into there
+        // TODO: Use a less explosive FailureAction and return a Result<> with the message instead
         unsafe {
             LLVMVerifyModule(
                 self.reference,

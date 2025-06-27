@@ -56,7 +56,6 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         unsafe { Value::new(value) }
     }
 
-    // TODO support calling with arguments (and verify their types)
     pub(crate) fn direct_call(
         &self,
         function: FunctionId,
@@ -64,8 +63,6 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         name: &str,
     ) -> Value {
         let name = CString::from_str(name).unwrap();
-        // TODO we should get the type together with the function, and also verify the return type
-        // matches the expected one
         let function = self.module().get_function(function);
         let mut arguments: Vec<_> = arguments.iter().map(Value::as_llvm_ref).collect();
 
@@ -81,8 +78,7 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
             )
         };
 
-        // SAFETY: LLVMBuildCall2 will return a correct value
-        // TODO ensure that we return a value of the correct type
+        // SAFETY: LLVMBuildCall2 will return a value that is valid
         unsafe { Value::new(result) }
     }
 

@@ -66,6 +66,7 @@ fn main() {
     let jit = Jit::new(built_package);
 
     // SAFETY: The signature matches the signature of the declaration
+    // TODO can we use a FunctionId here instead of the name?
     let callable: JitFunction<unsafe extern "C" fn(u64) -> u64> =
         unsafe { jit.get_function("main") };
 

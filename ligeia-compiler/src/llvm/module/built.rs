@@ -9,8 +9,6 @@ use llvm_sys::{
 use super::{FunctionId, ModuleId};
 use crate::llvm::function::Function;
 
-// TODO use it!
-#[allow(unused)]
 pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
@@ -51,10 +49,12 @@ impl Module {
     pub(crate) fn link(&self, mut module: Self) {
         let reference = module.reference;
         module.reference = std::ptr::null_mut();
-        // TODO handle errors
+        // TODO add the diagnostic handler so we can get the actual error messages from the linker
         // SAFETY: if the Module object exists, the reference must be valid, and we're consuming
         // the linked-in Module, so nobody can use that reference anymore
-        unsafe { LLVMLinkModules2(self.reference, reference) };
+        let is_failed = unsafe { LLVMLinkModules2(self.reference, reference) } != 0;
+
+        assert!(!is_failed, "Linking modules failed");
     }
 }
 
