@@ -12,7 +12,7 @@ use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::llvm::{
     LLVM_CONTEXT,
     module::{FunctionId, ModuleBuilder},
-    types::{Type, integer::U64, value::Value},
+    types::{Type, value::Value},
 };
 
 #[non_exhaustive]
@@ -39,7 +39,7 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         }
     }
 
-    pub(crate) fn add(&self, left: &Value<U64>, right: &Value<U64>, name: &str) -> Value<U64> {
+    pub(crate) fn add(&self, left: &Value, right: &Value, name: &str) -> Value {
         let name = CString::from_str(name).unwrap();
 
         // SAFETY: the builder is valid and positioned, left and right exist for duration of the
@@ -56,12 +56,18 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         unsafe { Value::new(value) }
     }
 
-    pub(crate) fn direct_call(&self, function: FunctionId, name: &str) -> Value<U64> {
+    // TODO support calling with arguments (and verify their types)
+    pub(crate) fn direct_call(
+        &self,
+        function: FunctionId,
+        arguments: &[Value],
+        name: &str,
+    ) -> Value {
         let name = CString::from_str(name).unwrap();
         // TODO we should get the type together with the function, and also verify the return type
         // matches the expected one
         let function = self.module().get_function(function);
-        let mut arguments = vec![];
+        let mut arguments: Vec<_> = arguments.iter().map(Value::as_llvm_ref).collect();
 
         // SAFETY: we ensured all the references are valid
         let result = unsafe {
@@ -80,7 +86,7 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         unsafe { Value::new(result) }
     }
 
-    pub(crate) fn r#return(&self, sum: &Value<U64>) -> TerminatorToken {
+    pub(crate) fn r#return(&self, sum: &Value) -> TerminatorToken {
         // SAFETY: we've a valid, positioned builder and the value must exist at least for the
         // duration of the call, so we're good
         unsafe { LLVMBuildRet(self.builder, sum.as_llvm_ref()) };

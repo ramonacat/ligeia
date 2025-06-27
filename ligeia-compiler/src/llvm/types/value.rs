@@ -1,23 +1,15 @@
-use std::marker::PhantomData;
-
 use llvm_sys::prelude::LLVMValueRef;
 
-use super::Type;
-
-pub struct Value<T: Type> {
+pub struct Value {
     reference: LLVMValueRef,
-    _phantom: PhantomData<Box<T>>,
 }
 
-impl<T: Type> Value<T> {
-    pub(in crate::llvm) const unsafe fn new(value: *mut llvm_sys::LLVMValue) -> Self {
-        Self {
-            reference: value,
-            _phantom: PhantomData,
-        }
+impl Value {
+    pub(in crate::llvm) const unsafe fn new(value: LLVMValueRef) -> Self {
+        Self { reference: value }
     }
 
-    pub(crate) const fn as_llvm_ref(&self) -> *mut llvm_sys::LLVMValue {
+    pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMValueRef {
         self.reference
     }
 }

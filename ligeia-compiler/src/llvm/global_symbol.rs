@@ -19,4 +19,14 @@ impl GlobalSymbols {
     pub(crate) fn intern(&self, name: &str) -> GlobalSymbol {
         GlobalSymbol(self.interner.write().unwrap().get_or_intern(name))
     }
+
+    // TODO can we somehow this in a way that allows returning &str?
+    pub(crate) fn resolve(&self, name: GlobalSymbol) -> String {
+        self.interner
+            .read()
+            .unwrap()
+            .resolve(name.0)
+            .unwrap()
+            .to_string()
+    }
 }

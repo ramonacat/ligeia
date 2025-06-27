@@ -7,14 +7,14 @@ use llvm_sys::{
 };
 
 use super::{FunctionId, ModuleId};
-use crate::llvm::{function::Function, types::function::FunctionType};
+use crate::llvm::function::Function;
 
 // TODO use it!
 #[allow(unused)]
 pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
-    functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
+    functions: HashMap<FunctionId, LLVMValueRef>,
 }
 
 impl Module {
@@ -28,7 +28,7 @@ impl Module {
     pub(in crate::llvm) const unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
-        functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
+        functions: HashMap<FunctionId, LLVMValueRef>,
     ) -> Self {
         Self {
             id,
@@ -40,12 +40,12 @@ impl Module {
     // TODO use it!
     #[allow(unused)]
     pub fn get_function(&self, id: FunctionId) -> Function {
-        assert!(id.0 == self.id);
+        assert!(id.module_id == self.id);
 
         let function = self.functions.get(&id).unwrap();
 
         // SAFETY: We got a reference to the function in the HashMap, so it must be valid
-        unsafe { Function::new(self, function.0, &function.1) }
+        unsafe { Function::new(self, *function, id.r#type) }
     }
 
     pub(crate) fn link(&self, mut module: Self) {

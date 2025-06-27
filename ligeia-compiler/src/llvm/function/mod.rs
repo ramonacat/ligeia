@@ -10,14 +10,14 @@ mod instruction_builder;
 pub struct Function<'module> {
     module: &'module Module,
     reference: LLVMValueRef,
-    r#type: &'module super::types::function::FunctionType,
+    r#type: super::types::function::FunctionType,
 }
 
 impl<'module> Function<'module> {
     pub(crate) const fn new(
         module: &'module Module,
         reference: LLVMValueRef,
-        r#type: &'module super::types::function::FunctionType,
+        r#type: super::types::function::FunctionType,
     ) -> Self {
         Self {
             module,

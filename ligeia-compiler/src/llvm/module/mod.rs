@@ -24,13 +24,17 @@ impl AnyModule for Module {}
 pub struct ModuleId(GlobalSymbol);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FunctionId(ModuleId, GlobalSymbol);
+pub struct FunctionId {
+    module_id: ModuleId,
+    name: GlobalSymbol,
+    r#type: FunctionType,
+}
 
 pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
     reference: LLVMModuleRef,
     global_symbols: &'symbols GlobalSymbols,
-    functions: HashMap<FunctionId, (LLVMValueRef, FunctionType)>,
+    functions: HashMap<FunctionId, LLVMValueRef>,
 }
 
 impl<'symbols> ModuleBuilder<'symbols> {
@@ -63,7 +67,11 @@ impl<'symbols> ModuleBuilder<'symbols> {
         r#type: types::function::FunctionType,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> FunctionId {
-        let id = FunctionId(self.id, self.global_symbols.intern(name));
+        let id = FunctionId {
+            module_id: self.id,
+            name: self.global_symbols.intern(name),
+            r#type,
+        };
         let builder = FunctionBuilder::new(self, name, r#type);
 
         // TODO we should probably ask the builder to
@@ -77,17 +85,24 @@ impl<'symbols> ModuleBuilder<'symbols> {
         id
     }
 
-    pub(crate) fn import_function(&mut self, name: &str, r#type: FunctionType) -> FunctionId {
-        let c_name = CString::from_str(name).unwrap();
+    pub(crate) fn import_function(&mut self, id: FunctionId) -> FunctionId {
+        assert!(id.module_id != self.id);
+
+        let name = self.global_symbols.resolve(id.name);
+        let c_name = CString::from_str(&name).unwrap();
 
         let function =
             // SAFETY: All the passed values come from objects which uphold guarantees about the
             // pointers being valid
-            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), r#type.as_llvm_ref()) };
+            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
 
-        let id = FunctionId(self.id, self.global_symbols.intern(name));
+        let id = FunctionId {
+            module_id: self.id,
+            name: id.name,
+            r#type: id.r#type,
+        };
 
-        self.functions.insert(id, (function, r#type));
+        self.functions.insert(id, function);
 
         id
     }
@@ -119,12 +134,12 @@ impl<'symbols> ModuleBuilder<'symbols> {
     }
 
     pub(in crate::llvm) fn get_function(&self, function: FunctionId) -> FunctionReference {
-        let (value, r#type) = self.functions.get(&function).unwrap();
+        let value = self.functions.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they
         // belong to this module, so as long as the function reference has a life time at least
         // equivalent to the lifetime of the Module, the value will remain valid
-        unsafe { FunctionReference::new(self, *value, r#type) }
+        unsafe { FunctionReference::new(self, *value, function.r#type) }
     }
 }
 

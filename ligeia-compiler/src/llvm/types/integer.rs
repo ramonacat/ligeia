@@ -45,7 +45,7 @@ impl Type for U64 {
 }
 
 impl U64 {
-    pub fn const_value(value: u64) -> Value<Self> {
+    pub fn const_value(value: u64) -> Value {
         // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
         // will be valid
         U64_ID.with(|r#type| unsafe { Value::new(LLVMConstInt(r#type.as_llvm_ref(), value, 0)) })

@@ -15,14 +15,14 @@ pub(in crate::llvm) struct FunctionReference<'module> {
     // TODO should this be PhantomData instead? we only care about the lifetime ATM
     _module: &'module dyn AnyModule,
     reference: LLVMValueRef,
-    r#type: &'module FunctionType,
+    r#type: FunctionType,
 }
 
 impl<'module> FunctionReference<'module> {
     pub(crate) unsafe fn new(
         module: &'module dyn AnyModule,
         reference: LLVMValueRef,
-        r#type: &'module FunctionType,
+        r#type: FunctionType,
     ) -> Self {
         Self {
             _module: module,
@@ -31,7 +31,7 @@ impl<'module> FunctionReference<'module> {
         }
     }
 
-    pub(crate) const fn r#type(&self) -> &FunctionType {
+    pub(crate) const fn r#type(&self) -> FunctionType {
         self.r#type
     }
 
@@ -77,7 +77,7 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
         self.function
     }
 
-    pub(crate) fn get_argument<TType: Type + 'static>(&self, index: u32) -> Option<Value<TType>> {
+    pub(crate) fn get_argument(&self, index: u32) -> Option<Value> {
         let argument_type = self.r#type.get_argument(index as usize)?;
 
         // SAFETY: We've ensured that the `index` is not out-of-bounds while getting the argument
@@ -85,15 +85,15 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
         let argument = unsafe { LLVMGetParam(self.function, index) };
 
         // SAFETY: We've ensured LLVMGetParam got correct arguments, so `argument` must be valid
-        assert!(argument_type.as_llvm_ref() == unsafe { LLVMTypeOf(argument) });
+        assert!(argument_type == unsafe { LLVMTypeOf(argument) });
 
         // SAFETY: We know that the type of the argument matches the type of the Value, so this is
         // correct and safe
         Some(unsafe { Value::new(argument) })
     }
 
-    pub(in crate::llvm) fn build(self) -> (LLVMValueRef, FunctionType) {
-        (self.function, self.r#type)
+    pub(in crate::llvm) const fn build(self) -> LLVMValueRef {
+        self.function
     }
 
     pub(crate) const fn module(&self) -> &'module ModuleBuilder<'symbols> {

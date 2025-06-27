@@ -12,10 +12,9 @@ fn main() {
     let mut package = PackageBuilder::new(&symbols);
 
     let side_module = package.add_module("side");
-
-    side_module.define_function(
+    let side = side_module.define_function(
         "side_fn",
-        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
+        types::function::FunctionType::new(&types::integer::U64, &[]),
         |function| {
             let block = function.create_block("entry");
 
@@ -24,47 +23,38 @@ fn main() {
     );
 
     let main_module = package.add_module("main");
-
-    // TODO this should really take just the ID from the original module, which already should
-    // contain a reference to the type (stored in some global function store)
-    let side = main_module.import_function(
-        "side_fn",
-        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
-    );
-
+    let side = main_module.import_function(side);
     let other = main_module.define_function(
         "other",
-        types::function::FunctionType::new(&types::integer::U64, Box::new([])),
+        types::function::FunctionType::new(&types::integer::U64, &[&types::integer::U64]),
         |function| {
             let block = function.create_block("entry");
 
-            block.build(|i| i.r#return(&types::integer::U64::const_value(11)));
+            block.build(|i| {
+                let left = types::integer::U64::const_value(2);
+                let right = types::integer::U64::const_value(11);
+                let sum = i.add(&left, &right, "sum");
+
+                i.r#return(&sum)
+            });
         },
     );
-
     main_module.define_function(
         "main",
-        types::function::FunctionType::new(
-            &types::integer::U64,
-            Box::new([Box::new(types::integer::U64)]),
-        ),
+        types::function::FunctionType::new(&types::integer::U64, &[&types::integer::U64]),
         |function| {
             let entry = function.create_block("entry");
 
             entry.build(|i| {
                 let base = types::integer::U64::const_value(32);
-                let sum = i.add(
-                    &base,
-                    &function.get_argument::<types::integer::U64>(0).unwrap(),
-                    "add",
+                let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
+                let value_from_other = i.direct_call(
+                    other,
+                    &[types::integer::U64::const_value(2)],
+                    "calling_other",
                 );
-
-                let value_from_other = i.direct_call(other, "calling_other");
-
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
-
-                let value_from_side = i.direct_call(side, "cross_module");
-
+                let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
 
                 i.r#return(&sum3)
@@ -73,7 +63,6 @@ fn main() {
     );
 
     let built_package = package.build();
-
     let jit = Jit::new(built_package);
 
     // SAFETY: The signature matches the signature of the declaration
