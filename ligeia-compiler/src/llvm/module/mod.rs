@@ -86,7 +86,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
             LLVMVerifyModule(
                 self.reference,
                 LLVMVerifierFailureAction::LLVMAbortProcessAction,
-                &mut out_message,
+                &raw mut out_message,
             )
         };
 

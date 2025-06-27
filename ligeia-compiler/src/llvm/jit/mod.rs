@@ -53,7 +53,7 @@ impl Jit {
                 LLVMCreateExecutionEngineForModule(
                     engine.as_mut_ptr(),
                     module.into_llvm_ref(),
-                    &mut error,
+                    &raw mut error,
                 )
             } != 0
             {
