@@ -6,18 +6,17 @@ use llvm_sys::{
 use super::Type;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-// TODO Rename to just Function
-pub struct FunctionType {
+pub struct Function {
     reference: LLVMTypeRef,
 }
 
-impl Type for FunctionType {
+impl Type for Function {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
 }
 
-impl FunctionType {
+impl Function {
     pub fn new(r#return: &dyn Type, arguments: &[&dyn Type]) -> Self {
         let mut param_types: Vec<_> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
 

@@ -7,22 +7,22 @@ use llvm_sys::{
 
 use super::block::FunctionBlock;
 use crate::llvm::{
-    module::{AnyModule, builder::ModuleBuilder},
-    types::{self, Type, function::FunctionType, value::Value},
+    module::{builder::ModuleBuilder, AnyModule},
+    types::{self, function::Function, value::Value, Type},
 };
 
 pub(in crate::llvm) struct FunctionReference<'module> {
     // TODO should this be PhantomData instead? we only care about the lifetime ATM
     _module: &'module dyn AnyModule,
     reference: LLVMValueRef,
-    r#type: FunctionType,
+    r#type: Function,
 }
 
 impl<'module> FunctionReference<'module> {
     pub(crate) unsafe fn new(
         module: &'module dyn AnyModule,
         reference: LLVMValueRef,
-        r#type: FunctionType,
+        r#type: Function,
     ) -> Self {
         Self {
             _module: module,
@@ -31,7 +31,7 @@ impl<'module> FunctionReference<'module> {
         }
     }
 
-    pub(crate) const fn r#type(&self) -> FunctionType {
+    pub(crate) const fn r#type(&self) -> Function {
         self.r#type
     }
 
@@ -42,7 +42,7 @@ impl<'module> FunctionReference<'module> {
 
 pub struct FunctionBuilder<'symbols, 'module> {
     function: LLVMValueRef,
-    r#type: types::function::FunctionType,
+    r#type: types::function::Function,
     module: &'module ModuleBuilder<'symbols>,
 }
 
@@ -50,7 +50,7 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
     pub fn new(
         module: &'module ModuleBuilder<'symbols>,
         name: &str,
-        r#type: types::function::FunctionType,
+        r#type: types::function::Function,
     ) -> Self {
         let name = CString::from_str(name).unwrap();
 

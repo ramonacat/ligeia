@@ -1,10 +1,13 @@
-pub mod builder;
 pub mod built;
+pub mod builder;
 
 use builder::ModuleBuilder;
 use built::Module;
 
-use super::{global_symbol::GlobalSymbol, types::function::FunctionType};
+use super::{
+    global_symbol::GlobalSymbol,
+    types::function::Function,
+};
 
 pub(in crate::llvm) trait AnyModule {}
 
@@ -18,5 +21,5 @@ pub struct ModuleId(GlobalSymbol);
 pub struct FunctionId {
     module_id: ModuleId,
     name: GlobalSymbol,
-    r#type: FunctionType,
+    r#type: Function,
 }

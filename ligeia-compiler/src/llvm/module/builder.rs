@@ -1,18 +1,11 @@
+use llvm_sys::core::LLVMDisposeModule;
 use std::{collections::HashMap, ffi::CString, str::FromStr as _};
 
-use llvm_sys::{
-    analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
-    core::{LLVMAddFunction, LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
-    prelude::{LLVMModuleRef, LLVMValueRef},
-};
+use llvm_sys::{analysis::{LLVMVerifierFailureAction, LLVMVerifyModule}, core::{LLVMAddFunction, LLVMDumpModule, LLVMModuleCreateWithNameInContext}, prelude::{LLVMModuleRef, LLVMValueRef}};
 
-use super::{FunctionId, ModuleId, built::Module};
-use crate::llvm::{
-    LLVM_CONTEXT,
-    function::builder::{FunctionBuilder, FunctionReference},
-    global_symbol::GlobalSymbols,
-    types::{self, Type as _},
-};
+use crate::llvm::{function::builder::{FunctionBuilder, FunctionReference}, global_symbol::GlobalSymbols, types::{self, Type as _}, LLVM_CONTEXT};
+
+use super::{built::Module, FunctionId, ModuleId};
 
 pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
@@ -49,7 +42,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
     pub(crate) fn define_function(
         &mut self,
         name: &str,
-        r#type: types::function::FunctionType,
+        r#type: types::function::Function,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> FunctionId {
         let id = FunctionId {

@@ -1,8 +1,5 @@
 use llvm::{
-    global_symbol::GlobalSymbols,
-    jit::{Jit, function::JitFunction},
-    package::builder::PackageBuilder,
-    types,
+    global_symbol::GlobalSymbols, jit::{function::JitFunction, Jit}, package::builder::PackageBuilder, types
 };
 
 mod llvm;
@@ -14,7 +11,7 @@ fn main() {
     let side_module = package_builder.add_module("side");
     let side = side_module.define_function(
         "side_fn",
-        types::function::FunctionType::new(&types::integer::U64, &[]),
+        types::function::Function::new(&types::integer::U64, &[]),
         |function| {
             let block = function.create_block("entry");
 
@@ -26,7 +23,7 @@ fn main() {
     let side = main_module.import_function(side);
     let other = main_module.define_function(
         "other",
-        types::function::FunctionType::new(&types::integer::U64, &[&types::integer::U64]),
+        types::function::Function::new(&types::integer::U64, &[&types::integer::U64]),
         |function| {
             let block = function.create_block("entry");
 
@@ -41,7 +38,7 @@ fn main() {
     );
     main_module.define_function(
         "main",
-        types::function::FunctionType::new(&types::integer::U64, &[&types::integer::U64]),
+        types::function::Function::new(&types::integer::U64, &[&types::integer::U64]),
         |function| {
             let entry = function.create_block("entry");
 
