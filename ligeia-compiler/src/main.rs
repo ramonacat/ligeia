@@ -11,11 +11,11 @@ fn main() {
     let side_module = package_builder.add_module("side");
     let side = side_module.define_function(
         "side_fn",
-        types::function::Function::new(&types::integer::U64, &[]),
+        types::Function::new(&types::U64, &[]),
         |function| {
             let block = function.create_block("entry");
 
-            block.build(|i| i.r#return(&types::integer::U64::const_value(7)));
+            block.build(|i| i.r#return(&types::U64::const_value(7)));
         },
     );
 
@@ -23,13 +23,13 @@ fn main() {
     let side = main_module.import_function(side);
     let other = main_module.define_function(
         "other",
-        types::function::Function::new(&types::integer::U64, &[&types::integer::U64]),
+        types::Function::new(&types::U64, &[&types::U64]),
         |function| {
             let block = function.create_block("entry");
 
             block.build(|i| {
-                let left = types::integer::U64::const_value(2);
-                let right = types::integer::U64::const_value(11);
+                let left = types::U64::const_value(2);
+                let right = types::U64::const_value(11);
                 let sum = i.add(&left, &right, "sum");
 
                 i.r#return(&sum)
@@ -38,16 +38,16 @@ fn main() {
     );
     main_module.define_function(
         "main",
-        types::function::Function::new(&types::integer::U64, &[&types::integer::U64]),
+        types::Function::new(&types::U64, &[&types::U64]),
         |function| {
             let entry = function.create_block("entry");
 
             entry.build(|i| {
-                let base = types::integer::U64::const_value(32);
+                let base = types::U64::const_value(32);
                 let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
                 let value_from_other = i.direct_call(
                     other,
-                    &[types::integer::U64::const_value(2)],
+                    &[types::U64::const_value(2)],
                     "calling_other",
                 );
                 let sum2 = i.add(&sum, &value_from_other, "add_again");

@@ -42,7 +42,7 @@ impl<'module> FunctionReference<'module> {
 
 pub struct FunctionBuilder<'symbols, 'module> {
     function: LLVMValueRef,
-    r#type: types::function::Function,
+    r#type: types::Function,
     module: &'module ModuleBuilder<'symbols>,
 }
 
@@ -50,7 +50,7 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
     pub fn new(
         module: &'module ModuleBuilder<'symbols>,
         name: &str,
-        r#type: types::function::Function,
+        r#type: types::Function,
     ) -> Self {
         let name = CString::from_str(name).unwrap();
 

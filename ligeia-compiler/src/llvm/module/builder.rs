@@ -42,7 +42,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
     pub(crate) fn define_function(
         &mut self,
         name: &str,
-        r#type: types::function::Function,
+        r#type: types::Function,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> FunctionId {
         let id = FunctionId {
