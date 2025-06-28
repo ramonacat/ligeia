@@ -18,13 +18,17 @@ use crate::llvm::{
 
 #[derive(Debug)]
 pub struct ModuleBuildError {
-    // TODO include ModuleId
+    module_name: String,
     message: String,
 }
 
 impl Display for ModuleBuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Failed to build the module: {}", self.message)
+        write!(
+            f,
+            "Failed to build the module \"{}\":\n{}",
+            self.module_name, self.message
+        )
     }
 }
 
@@ -114,7 +118,6 @@ impl ModuleBuilder {
         // SAFETY: We have a valid, non-null `reference`, and since the action is
         // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
         // we'll get a new pointer put into there
-        // TODO: Use a less explosive FailureAction and return a Result<> with the message instead
         let verify_result = unsafe {
             LLVMVerifyModule(
                 self.reference,
@@ -131,7 +134,10 @@ impl ModuleBuilder {
                 .unwrap()
                 .to_string();
 
-            return Err(ModuleBuildError { message });
+            return Err(ModuleBuildError {
+                module_name: self.symbols.resolve(self.id.0),
+                message,
+            });
         }
 
         // SAFETY: We have a valid, non-null `reference`, so this function can't fail
