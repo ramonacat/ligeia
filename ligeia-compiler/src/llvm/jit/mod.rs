@@ -16,7 +16,7 @@ use llvm_sys::{
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
 
-use super::package::Package;
+use super::{global_symbol::GlobalSymbols, module::FunctionId, package::Package};
 
 #[derive(Clone, Copy)]
 struct JITToken;
@@ -32,14 +32,14 @@ static JIT_SETUP: LazyLock<JITToken> = LazyLock::new(|| {
     JITToken
 });
 
-pub struct Jit {
-    #[allow(unused)]
-    token: JITToken,
+pub struct Jit<'symbols> {
+    _token: JITToken,
     execution_engine: LLVMExecutionEngineRef,
+    symbols: &'symbols GlobalSymbols,
 }
 
-impl Jit {
-    pub(crate) fn new(package: Package) -> Self {
+impl<'symbols> Jit<'symbols> {
+    pub(crate) fn new(package: Package, symbols: &'symbols GlobalSymbols) -> Self {
         let token = *JIT_SETUP;
         let module = package.into_module();
 
@@ -69,13 +69,14 @@ impl Jit {
         };
 
         Self {
-            token,
+            _token: token,
             execution_engine,
+            symbols,
         }
     }
 
-    pub(crate) unsafe fn get_function<TFunction>(&self, name: &str) -> JitFunction<TFunction> {
-        let name = CString::from_str(name).unwrap();
+    pub(crate) unsafe fn get_function<TFunction>(&self, id: FunctionId) -> JitFunction<TFunction> {
+        let name = CString::from_str(&self.symbols.resolve(id.name())).unwrap();
 
         // SAFETY: We have a valid `execution_engine`, valid null-terminated name. The function
         // must exist. We transmute the pointer into a generic fn() one, which must be further
@@ -87,7 +88,7 @@ impl Jit {
     }
 }
 
-impl Drop for Jit {
+impl Drop for Jit<'_> {
     fn drop(&mut self) {
         // SAFETY: If Jit is dropped, then nobody should be executing any JITted code anymore, so
         // we are free to drop it.

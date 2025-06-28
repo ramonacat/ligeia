@@ -8,6 +8,7 @@ use llvm::{
 mod llvm;
 
 fn main() {
+    // TODO can package_builder own symbols?
     let symbols = GlobalSymbols::new();
     let mut package_builder = PackageBuilder::new(&symbols);
 
@@ -39,7 +40,7 @@ fn main() {
             });
         },
     );
-    main_module.define_function(
+    let main_function = main_module.define_function(
         "main",
         types::Function::new(&types::U64, &[&types::U64]),
         |function| {
@@ -67,12 +68,12 @@ fn main() {
             return;
         }
     };
-    let jit = Jit::new(package);
+    let jit = Jit::new(package, &symbols);
 
     // SAFETY: The signature matches the signature of the declaration
     // TODO can we use a FunctionId here instead of the name?
     let callable: JitFunction<unsafe extern "C" fn(u64) -> u64> =
-        unsafe { jit.get_function("main") };
+        unsafe { jit.get_function(main_function) };
 
     // SAFETY: The JITted code is correct and memory safe, right? I'm sure there aren't any bugs
     // lurking
