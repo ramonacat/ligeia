@@ -1,5 +1,8 @@
 use super::Package;
-use crate::llvm::{global_symbol::GlobalSymbols, module::builder::ModuleBuilder};
+use crate::llvm::{
+    global_symbol::GlobalSymbols,
+    module::builder::{ModuleBuildError, ModuleBuilder},
+};
 
 pub struct PackageBuilder<'symbols> {
     global_symbols: &'symbols GlobalSymbols,
@@ -24,12 +27,12 @@ where
         self.modules.last_mut().unwrap()
     }
 
-    pub(crate) fn build(self) -> Package {
+    pub(crate) fn build(self) -> Result<Package, ModuleBuildError> {
         let mut built_modules = self
             .modules
             .into_iter()
             .map(ModuleBuilder::build)
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, ModuleBuildError>>()?;
 
         let final_module = built_modules
             .pop()
@@ -39,6 +42,6 @@ where
             final_module.link(module);
         }
 
-        Package::new(final_module)
+        Ok(Package::new(final_module))
     }
 }

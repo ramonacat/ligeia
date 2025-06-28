@@ -1,11 +1,32 @@
-use llvm_sys::core::LLVMDisposeModule;
-use std::{collections::HashMap, ffi::CString, str::FromStr as _};
+use std::{collections::HashMap, error::Error, ffi::CString, fmt::Display, str::FromStr as _};
 
-use llvm_sys::{analysis::{LLVMVerifierFailureAction, LLVMVerifyModule}, core::{LLVMAddFunction, LLVMDumpModule, LLVMModuleCreateWithNameInContext}, prelude::{LLVMModuleRef, LLVMValueRef}};
+use llvm_sys::{
+    analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
+    core::{LLVMAddFunction, LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
+    prelude::{LLVMModuleRef, LLVMValueRef},
+};
 
-use crate::llvm::{function::builder::{FunctionBuilder, FunctionReference}, global_symbol::GlobalSymbols, types::{self, Type as _}, LLVM_CONTEXT};
+use super::{FunctionId, ModuleId, built::Module};
+use crate::llvm::{
+    LLVM_CONTEXT,
+    function::builder::{FunctionBuilder, FunctionReference},
+    global_symbol::GlobalSymbols,
+    types::{self, Type as _},
+};
 
-use super::{built::Module, FunctionId, ModuleId};
+#[derive(Debug)]
+pub struct ModuleBuildError {
+    // TODO include ModuleId
+    message: String,
+}
+
+impl Display for ModuleBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Failed to build the module: {}", self.message)
+    }
+}
+
+impl Error for ModuleBuildError {}
 
 pub struct ModuleBuilder<'symbols> {
     id: ModuleId,
@@ -86,19 +107,30 @@ impl<'symbols> ModuleBuilder<'symbols> {
         id
     }
 
-    pub(crate) fn build(mut self) -> Module {
+    pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
         // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
         // we'll get a new pointer put into there
         // TODO: Use a less explosive FailureAction and return a Result<> with the message instead
-        unsafe {
+        let verify_result = unsafe {
             LLVMVerifyModule(
                 self.reference,
-                LLVMVerifierFailureAction::LLVMAbortProcessAction,
+                LLVMVerifierFailureAction::LLVMReturnStatusAction,
                 &raw mut out_message,
             )
         };
+
+        if verify_result != 0 {
+            // SAFETY: We received the message from the verify call above, it must be a valid
+            // pointer
+            let message = unsafe { CString::from_raw(out_message) }
+                .to_str()
+                .unwrap()
+                .to_string();
+
+            return Err(ModuleBuildError { message });
+        }
 
         // SAFETY: We have a valid, non-null `reference`, so this function can't fail
         unsafe { LLVMDumpModule(self.reference) };
@@ -110,7 +142,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         std::mem::swap(&mut functions, &mut self.functions);
 
         // SAFETY: We have ensured that the reference is not owned by this current object
-        unsafe { Module::new(self.id, reference, functions) }
+        Ok(unsafe { Module::new(self.id, reference, functions) })
     }
 
     pub(in crate::llvm) fn get_function(&self, function: FunctionId) -> FunctionReference {

@@ -7,8 +7,8 @@ use llvm_sys::{
 
 use super::block::FunctionBlock;
 use crate::llvm::{
-    module::{builder::ModuleBuilder, AnyModule},
-    types::{self, function::Function, value::Value, Type},
+    module::{AnyModule, builder::ModuleBuilder},
+    types::{self, Type, function::Function, value::Value},
 };
 
 pub(in crate::llvm) struct FunctionReference<'module> {

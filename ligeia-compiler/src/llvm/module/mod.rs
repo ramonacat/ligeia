@@ -1,13 +1,10 @@
-pub mod built;
 pub mod builder;
+pub mod built;
 
 use builder::ModuleBuilder;
 use built::Module;
 
-use super::{
-    global_symbol::GlobalSymbol,
-    types::function::Function,
-};
+use super::{global_symbol::GlobalSymbol, types::function::Function};
 
 pub(in crate::llvm) trait AnyModule {}
 

@@ -1,5 +1,8 @@
 use llvm::{
-    global_symbol::GlobalSymbols, jit::{function::JitFunction, Jit}, package::builder::PackageBuilder, types
+    global_symbol::GlobalSymbols,
+    jit::{Jit, function::JitFunction},
+    package::builder::PackageBuilder,
+    types,
 };
 
 mod llvm;
@@ -45,11 +48,8 @@ fn main() {
             entry.build(|i| {
                 let base = types::U64::const_value(32);
                 let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
-                let value_from_other = i.direct_call(
-                    other,
-                    &[types::U64::const_value(2)],
-                    "calling_other",
-                );
+                let value_from_other =
+                    i.direct_call(other, &[types::U64::const_value(2)], "calling_other");
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
                 let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
@@ -59,7 +59,14 @@ fn main() {
         },
     );
 
-    let package = package_builder.build();
+    let package = match package_builder.build() {
+        Ok(package) => package,
+        Err(error) => {
+            eprintln!("{error}");
+
+            return;
+        }
+    };
     let jit = Jit::new(package);
 
     // SAFETY: The signature matches the signature of the declaration
