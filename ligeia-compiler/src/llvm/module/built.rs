@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use llvm_sys::{
     core::LLVMDisposeModule,
@@ -7,12 +7,13 @@ use llvm_sys::{
 };
 
 use super::{FunctionId, ModuleId};
-use crate::llvm::function::Function;
+use crate::llvm::{function::Function, global_symbol::GlobalSymbols};
 
 pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
     functions: HashMap<FunctionId, LLVMValueRef>,
+    symbols: Rc<GlobalSymbols>,
 }
 
 impl Module {
@@ -27,11 +28,13 @@ impl Module {
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
         functions: HashMap<FunctionId, LLVMValueRef>,
+        symbols: Rc<GlobalSymbols>,
     ) -> Self {
         Self {
             id,
             reference,
             functions,
+            symbols,
         }
     }
 
@@ -55,6 +58,10 @@ impl Module {
         let is_failed = unsafe { LLVMLinkModules2(self.reference, reference) } != 0;
 
         assert!(!is_failed, "Linking modules failed");
+    }
+
+    pub(in crate::llvm) fn symbols(&self) -> Rc<GlobalSymbols> {
+        self.symbols.clone()
     }
 }
 

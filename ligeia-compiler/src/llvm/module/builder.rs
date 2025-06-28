@@ -1,4 +1,6 @@
-use std::{collections::HashMap, error::Error, ffi::CString, fmt::Display, str::FromStr as _};
+use std::{
+    collections::HashMap, error::Error, ffi::CString, fmt::Display, rc::Rc, str::FromStr as _,
+};
 
 use llvm_sys::{
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
@@ -28,15 +30,15 @@ impl Display for ModuleBuildError {
 
 impl Error for ModuleBuildError {}
 
-pub struct ModuleBuilder<'symbols> {
+pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
-    global_symbols: &'symbols GlobalSymbols,
+    symbols: Rc<GlobalSymbols>,
     functions: HashMap<FunctionId, LLVMValueRef>,
 }
 
-impl<'symbols> ModuleBuilder<'symbols> {
-    pub fn new(global_symbols: &'symbols GlobalSymbols, name: &str) -> Self {
+impl ModuleBuilder {
+    pub(in crate::llvm) fn new(global_symbols: Rc<GlobalSymbols>, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
@@ -50,7 +52,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         Self {
             reference: module,
             id: ModuleId(global_symbols.intern(name)),
-            global_symbols,
+            symbols: global_symbols,
             functions: HashMap::new(),
         }
     }
@@ -68,7 +70,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
     ) -> FunctionId {
         let id = FunctionId {
             module_id: self.id,
-            name: self.global_symbols.intern(name),
+            name: self.symbols.intern(name),
             r#type,
         };
         let builder = FunctionBuilder::new(self, name, r#type);
@@ -88,7 +90,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
     pub(crate) fn import_function(&mut self, id: FunctionId) -> FunctionId {
         assert!(id.module_id != self.id);
 
-        let name = self.global_symbols.resolve(id.name);
+        let name = self.symbols.resolve(id.name);
         let c_name = CString::from_str(&name).unwrap();
 
         let function =
@@ -142,7 +144,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
         std::mem::swap(&mut functions, &mut self.functions);
 
         // SAFETY: We have ensured that the reference is not owned by this current object
-        Ok(unsafe { Module::new(self.id, reference, functions) })
+        Ok(unsafe { Module::new(self.id, reference, functions, self.symbols.clone()) })
     }
 
     pub(in crate::llvm) fn get_function(&self, function: FunctionId) -> FunctionReference {
@@ -155,7 +157,7 @@ impl<'symbols> ModuleBuilder<'symbols> {
     }
 }
 
-impl Drop for ModuleBuilder<'_> {
+impl Drop for ModuleBuilder {
     fn drop(&mut self) {
         if self.reference.is_null() {
             return;

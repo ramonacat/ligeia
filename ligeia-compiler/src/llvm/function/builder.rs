@@ -40,18 +40,14 @@ impl<'module> FunctionReference<'module> {
     }
 }
 
-pub struct FunctionBuilder<'symbols, 'module> {
+pub struct FunctionBuilder<'module> {
     function: LLVMValueRef,
     r#type: types::Function,
-    module: &'module ModuleBuilder<'symbols>,
+    module: &'module ModuleBuilder,
 }
 
-impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
-    pub fn new(
-        module: &'module ModuleBuilder<'symbols>,
-        name: &str,
-        r#type: types::Function,
-    ) -> Self {
+impl<'module> FunctionBuilder<'module> {
+    pub fn new(module: &'module ModuleBuilder, name: &str, r#type: types::Function) -> Self {
         let name = CString::from_str(name).unwrap();
 
         let function =
@@ -69,7 +65,7 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
     pub(crate) fn create_block<'function>(
         &'function self,
         name: &str,
-    ) -> FunctionBlock<'symbols, 'function, 'module> {
+    ) -> FunctionBlock<'function, 'module> {
         FunctionBlock::new(self, name)
     }
 
@@ -96,7 +92,7 @@ impl<'symbols, 'module> FunctionBuilder<'symbols, 'module> {
         self.function
     }
 
-    pub(crate) const fn module(&self) -> &'module ModuleBuilder<'symbols> {
+    pub(crate) const fn module(&self) -> &'module ModuleBuilder {
         self.module
     }
 }

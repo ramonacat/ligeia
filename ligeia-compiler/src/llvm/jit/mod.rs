@@ -3,6 +3,7 @@ pub mod function;
 use std::{
     ffi::{CStr, CString},
     mem::MaybeUninit,
+    rc::Rc,
     str::FromStr,
     sync::LazyLock,
 };
@@ -32,15 +33,16 @@ static JIT_SETUP: LazyLock<JITToken> = LazyLock::new(|| {
     JITToken
 });
 
-pub struct Jit<'symbols> {
+pub struct Jit {
     _token: JITToken,
     execution_engine: LLVMExecutionEngineRef,
-    symbols: &'symbols GlobalSymbols,
+    symbols: Rc<GlobalSymbols>,
 }
 
-impl<'symbols> Jit<'symbols> {
-    pub(crate) fn new(package: Package, symbols: &'symbols GlobalSymbols) -> Self {
+impl Jit {
+    pub(crate) fn new(package: Package) -> Self {
         let token = *JIT_SETUP;
+        let symbols = package.symbols();
         let module = package.into_module();
 
         let execution_engine = {
@@ -88,7 +90,7 @@ impl<'symbols> Jit<'symbols> {
     }
 }
 
-impl Drop for Jit<'_> {
+impl Drop for Jit {
     fn drop(&mut self) {
         // SAFETY: If Jit is dropped, then nobody should be executing any JITted code anymore, so
         // we are free to drop it.

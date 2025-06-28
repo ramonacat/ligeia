@@ -1,5 +1,4 @@
 use llvm::{
-    global_symbol::GlobalSymbols,
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types,
@@ -8,9 +7,7 @@ use llvm::{
 mod llvm;
 
 fn main() {
-    // TODO can package_builder own symbols?
-    let symbols = GlobalSymbols::new();
-    let mut package_builder = PackageBuilder::new(&symbols);
+    let mut package_builder = PackageBuilder::new();
 
     let side_module = package_builder.add_module("side");
     let side = side_module.define_function(
@@ -68,7 +65,7 @@ fn main() {
             return;
         }
     };
-    let jit = Jit::new(package, &symbols);
+    let jit = Jit::new(package);
 
     // SAFETY: The signature matches the signature of the declaration
     // TODO can we use a FunctionId here instead of the name?

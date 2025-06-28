@@ -19,14 +19,14 @@ use crate::llvm::{
 pub struct TerminatorToken;
 
 // TODO: can 'function and module be the same lifetime?
-pub struct InstructionBuilder<'symbols, 'function, 'module> {
+pub struct InstructionBuilder<'function, 'module> {
     builder: LLVMBuilderRef,
-    function_builder: &'function FunctionBuilder<'symbols, 'module>,
-    _phantom: PhantomData<&'function FunctionBlock<'symbols, 'function, 'module>>,
+    function_builder: &'function FunctionBuilder<'module>,
+    _phantom: PhantomData<&'function FunctionBlock<'function, 'module>>,
 }
 
-impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'module> {
-    pub(crate) fn new(block: &'function FunctionBlock<'symbols, 'function, 'module>) -> Self {
+impl<'function, 'module> InstructionBuilder<'function, 'module> {
+    pub(crate) fn new(block: &'function FunctionBlock<'function, 'module>) -> Self {
         let builder = LLVM_CONTEXT
             // SAFETY: The context lives for 'static so we're free to keep the builder
             .with(|context| unsafe { LLVMCreateBuilderInContext(context.as_llvm_ref()) });
@@ -91,12 +91,12 @@ impl<'symbols, 'function, 'module> InstructionBuilder<'symbols, 'function, 'modu
         TerminatorToken
     }
 
-    const fn module(&self) -> &ModuleBuilder<'symbols> {
+    const fn module(&self) -> &ModuleBuilder {
         self.function_builder.module()
     }
 }
 
-impl Drop for InstructionBuilder<'_, '_, '_> {
+impl Drop for InstructionBuilder<'_, '_> {
     fn drop(&mut self) {
         // SAFETY: We own the builder, we're free to dispose it. If anyone needs it, they should
         // have a ref to `InstructionBuilder` and prevent the Drop

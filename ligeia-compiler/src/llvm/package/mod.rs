@@ -1,17 +1,23 @@
 pub mod builder;
 
-use super::module::built::Module;
+use std::rc::Rc;
+
+use super::{global_symbol::GlobalSymbols, module::built::Module};
 
 pub struct Package {
     module: Module,
 }
 
 impl Package {
-    pub const fn new(module: Module) -> Self {
+    pub(in crate::llvm) const fn new(module: Module) -> Self {
         Self { module }
     }
 
-    pub(crate) fn into_module(self) -> Module {
+    pub(in crate::llvm) fn into_module(self) -> Module {
         self.module
+    }
+
+    pub(in crate::llvm) fn symbols(&self) -> Rc<GlobalSymbols> {
+        self.module.symbols()
     }
 }

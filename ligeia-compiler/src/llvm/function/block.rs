@@ -7,16 +7,14 @@ use super::{
     instruction_builder::{InstructionBuilder, TerminatorToken},
 };
 
-pub struct FunctionBlock<'symbols, 'function, 'module> {
-    function_builder: &'function FunctionBuilder<'symbols, 'module>,
+// TODO can 'function and module be the same lifetime?
+pub struct FunctionBlock<'function, 'module> {
+    function_builder: &'function FunctionBuilder<'module>,
     block: *mut llvm_sys::LLVMBasicBlock,
 }
 
-impl<'symbols, 'function, 'module> FunctionBlock<'symbols, 'function, 'module> {
-    pub fn new(
-        function_builder: &'function FunctionBuilder<'symbols, 'module>,
-        name: &str,
-    ) -> Self {
+impl<'function, 'module> FunctionBlock<'function, 'module> {
+    pub fn new(function_builder: &'function FunctionBuilder<'module>, name: &str) -> Self {
         let name = CString::from_str(name).unwrap();
         // SAFETY: we know the function is a valid ref and name is a valid null-terminated C-string
         let block = unsafe { LLVMAppendBasicBlock(function_builder.as_llvm_ref(), name.as_ptr()) };
@@ -37,7 +35,7 @@ impl<'symbols, 'function, 'module> FunctionBlock<'symbols, 'function, 'module> {
         self.block
     }
 
-    pub(crate) const fn function_builder(&self) -> &FunctionBuilder<'symbols, 'module> {
+    pub(crate) const fn function_builder(&self) -> &FunctionBuilder<'module> {
         self.function_builder
     }
 }

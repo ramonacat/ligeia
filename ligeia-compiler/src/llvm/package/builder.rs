@@ -1,28 +1,28 @@
+use std::rc::Rc;
+
 use super::Package;
 use crate::llvm::{
     global_symbol::GlobalSymbols,
     module::builder::{ModuleBuildError, ModuleBuilder},
 };
 
-pub struct PackageBuilder<'symbols> {
-    global_symbols: &'symbols GlobalSymbols,
-    modules: Vec<ModuleBuilder<'symbols>>,
+pub struct PackageBuilder {
+    global_symbols: Rc<GlobalSymbols>,
+    modules: Vec<ModuleBuilder>,
 }
 
-impl<'package, 'symbols> PackageBuilder<'symbols>
-where
-    'symbols: 'package,
-{
-    pub const fn new(global_symbols: &'symbols GlobalSymbols) -> Self {
+impl<'package> PackageBuilder {
+    pub fn new() -> Self {
         Self {
-            global_symbols,
+            global_symbols: Rc::new(GlobalSymbols::new()),
             modules: vec![],
         }
     }
 
-    pub fn add_module(&'package mut self, name: &str) -> &'package mut ModuleBuilder<'symbols> {
+    // TODO is the 'package life needed?
+    pub fn add_module(&'package mut self, name: &str) -> &'package mut ModuleBuilder {
         self.modules
-            .push(ModuleBuilder::new(self.global_symbols, name));
+            .push(ModuleBuilder::new(self.global_symbols.clone(), name));
 
         self.modules.last_mut().unwrap()
     }

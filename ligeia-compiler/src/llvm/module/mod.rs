@@ -8,7 +8,7 @@ use super::{global_symbol::GlobalSymbol, types::function::Function};
 
 pub(in crate::llvm) trait AnyModule {}
 
-impl AnyModule for ModuleBuilder<'_> {}
+impl AnyModule for ModuleBuilder {}
 impl AnyModule for Module {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
