@@ -10,6 +10,10 @@ use llvm_sys::{
     prelude::LLVMContextRef,
 };
 
+thread_local! {
+    pub static LLVM_CONTEXT: Context = Context::new();
+}
+
 struct Context(LLVMContextRef);
 
 impl Context {
@@ -32,8 +36,4 @@ impl Drop for Context {
             LLVMContextDispose(self.0);
         }
     }
-}
-
-thread_local! {
-    pub static LLVM_CONTEXT: Context = Context::new();
 }

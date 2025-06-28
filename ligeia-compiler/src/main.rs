@@ -1,7 +1,7 @@
 use llvm::{
     global_symbol::GlobalSymbols,
     jit::{Jit, function::JitFunction},
-    package::PackageBuilder,
+    package::builder::PackageBuilder,
     types,
 };
 
@@ -9,9 +9,9 @@ mod llvm;
 
 fn main() {
     let symbols = GlobalSymbols::new();
-    let mut package = PackageBuilder::new(&symbols);
+    let mut package_builder = PackageBuilder::new(&symbols);
 
-    let side_module = package.add_module("side");
+    let side_module = package_builder.add_module("side");
     let side = side_module.define_function(
         "side_fn",
         types::function::FunctionType::new(&types::integer::U64, &[]),
@@ -22,7 +22,7 @@ fn main() {
         },
     );
 
-    let main_module = package.add_module("main");
+    let main_module = package_builder.add_module("main");
     let side = main_module.import_function(side);
     let other = main_module.define_function(
         "other",
@@ -62,8 +62,8 @@ fn main() {
         },
     );
 
-    let built_package = package.build();
-    let jit = Jit::new(built_package);
+    let package = package_builder.build();
+    let jit = Jit::new(package);
 
     // SAFETY: The signature matches the signature of the declaration
     // TODO can we use a FunctionId here instead of the name?

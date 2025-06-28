@@ -11,13 +11,14 @@ use llvm_sys::{
 use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::llvm::{
     LLVM_CONTEXT,
-    module::{FunctionId, ModuleBuilder},
+    module::{FunctionId, builder::ModuleBuilder},
     types::{Type, value::Value},
 };
 
 #[non_exhaustive]
 pub struct TerminatorToken;
 
+// TODO: can 'function and module be the same lifetime?
 pub struct InstructionBuilder<'symbols, 'function, 'module> {
     builder: LLVMBuilderRef,
     function_builder: &'function FunctionBuilder<'symbols, 'module>,

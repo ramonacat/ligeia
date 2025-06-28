@@ -6,6 +6,7 @@ use llvm_sys::{
 use super::Type;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// TODO Rename to just Function
 pub struct FunctionType {
     reference: LLVMTypeRef,
 }

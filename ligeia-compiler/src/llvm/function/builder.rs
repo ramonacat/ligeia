@@ -7,7 +7,7 @@ use llvm_sys::{
 
 use super::block::FunctionBlock;
 use crate::llvm::{
-    module::{AnyModule, ModuleBuilder},
+    module::{AnyModule, builder::ModuleBuilder},
     types::{self, Type, function::FunctionType, value::Value},
 };
 
