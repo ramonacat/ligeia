@@ -62,15 +62,8 @@ impl<'module> FunctionBuilder<'module> {
         }
     }
 
-    pub(crate) fn create_block<'function>(
-        &'function self,
-        name: &str,
-    ) -> FunctionBlock<'function, 'module> {
+    pub(crate) fn create_block(&'module self, name: &str) -> FunctionBlock<'module> {
         FunctionBlock::new(self, name)
-    }
-
-    pub(in crate::llvm) const fn as_llvm_ref(&self) -> *mut llvm_sys::LLVMValue {
-        self.function
     }
 
     pub(crate) fn get_argument(&self, index: u32) -> Option<Value> {
@@ -92,7 +85,11 @@ impl<'module> FunctionBuilder<'module> {
         self.function
     }
 
-    pub(crate) const fn module(&self) -> &'module ModuleBuilder {
+    pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMValueRef {
+        self.function
+    }
+
+    pub(in crate::llvm) const fn module(&self) -> &'module ModuleBuilder {
         self.module
     }
 }

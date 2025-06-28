@@ -11,7 +11,7 @@ pub struct PackageBuilder {
     modules: Vec<ModuleBuilder>,
 }
 
-impl<'package> PackageBuilder {
+impl PackageBuilder {
     pub fn new() -> Self {
         Self {
             global_symbols: Rc::new(GlobalSymbols::new()),
@@ -19,8 +19,7 @@ impl<'package> PackageBuilder {
         }
     }
 
-    // TODO is the 'package life needed?
-    pub fn add_module(&'package mut self, name: &str) -> &'package mut ModuleBuilder {
+    pub fn add_module(&mut self, name: &str) -> &mut ModuleBuilder {
         self.modules
             .push(ModuleBuilder::new(self.global_symbols.clone(), name));
 
