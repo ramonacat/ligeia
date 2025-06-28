@@ -43,6 +43,8 @@ impl Error for ModuleBuildError {}
 pub enum FunctionImportError {
     #[error("Function {0:?} is not exported")]
     NotExported(FunctionId),
+    #[error("Function {0:?} cannot be imported into the same module where it was defined")]
+    DefinedInThisModule(FunctionId),
 }
 
 pub struct ModuleBuilder {
@@ -108,8 +110,9 @@ impl ModuleBuilder {
         &mut self,
         id: FunctionId,
     ) -> Result<FunctionId, FunctionImportError> {
-        // TODO return Err instead of panicking?
-        assert!(id.module_id != self.id);
+        if id.module_id == self.id {
+            return Err(FunctionImportError::DefinedInThisModule(id));
+        }
 
         if id.visibility != Visibility::Export {
             return Err(FunctionImportError::NotExported(id));
