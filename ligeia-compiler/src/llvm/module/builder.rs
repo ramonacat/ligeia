@@ -105,7 +105,6 @@ impl ModuleBuilder {
         id
     }
 
-    // TODO verify that the other module actually exports the function
     pub(crate) fn import_function(
         &mut self,
         id: FunctionId,

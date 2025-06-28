@@ -10,7 +10,7 @@ mod llvm;
 fn main() {
     let mut package_builder = PackageBuilder::new();
 
-    let side_module = package_builder.add_module("side");
+    let side_module = package_builder.add_module("side").unwrap();
     let side = side_module.define_function(
         &FunctionDeclaration::new(
             "side_fn",
@@ -24,7 +24,7 @@ fn main() {
         },
     );
 
-    let main_module = package_builder.add_module("main");
+    let main_module = package_builder.add_module("main").unwrap();
     let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
         &FunctionDeclaration::new(

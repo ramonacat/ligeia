@@ -1,4 +1,9 @@
-use std::rc::Rc;
+use std::{
+    collections::{HashMap, hash_map::Entry},
+    rc::Rc,
+};
+
+use thiserror::Error;
 
 use super::{Package, context::PackageContext, id::PACKAGE_ID_GENERATOR};
 use crate::llvm::{
@@ -6,9 +11,15 @@ use crate::llvm::{
     module::builder::{ModuleBuildError, ModuleBuilder},
 };
 
+#[derive(Debug, Error)]
+pub enum AddModuleError {
+    #[error("Module \"{0}\" already exists in this package")]
+    AlreadyExists(String),
+}
+
 pub struct PackageBuilder {
     context: PackageContext,
-    modules: Vec<ModuleBuilder>,
+    modules: HashMap<String, ModuleBuilder>,
 }
 
 impl PackageBuilder {
@@ -18,22 +29,28 @@ impl PackageBuilder {
                 PACKAGE_ID_GENERATOR.next(),
                 Rc::new(GlobalSymbols::new()),
             ),
-            modules: vec![],
+            modules: HashMap::new(),
         }
     }
 
-    pub fn add_module(&mut self, name: &str) -> &mut ModuleBuilder {
-        // TODO we have to assert here that there isn't already a module with the same name,
-        // otherwise the ModuleIds will be non-unique
-        self.modules.push(ModuleBuilder::new(&self.context, name));
+    pub fn add_module(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<&mut ModuleBuilder, AddModuleError> {
+        let name: String = name.into();
+        let entry = self.modules.entry(name.clone());
 
-        self.modules.last_mut().unwrap()
+        if let Entry::Occupied(_) = entry {
+            return Err(AddModuleError::AlreadyExists(name));
+        }
+
+        Ok(entry.or_insert_with(|| ModuleBuilder::new(&self.context, &name)))
     }
 
     pub(crate) fn build(self) -> Result<Package, ModuleBuildError> {
         let mut built_modules = self
             .modules
-            .into_iter()
+            .into_values()
             .map(ModuleBuilder::build)
             .collect::<Result<Vec<_>, ModuleBuildError>>()?;
 
