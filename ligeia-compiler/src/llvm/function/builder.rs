@@ -1,11 +1,15 @@
 use std::{ffi::CString, str::FromStr as _};
 
 use llvm_sys::{
-    core::{LLVMAddFunction, LLVMGetParam, LLVMTypeOf},
+    LLVMLinkage,
+    core::{LLVMAddFunction, LLVMGetParam, LLVMSetLinkage, LLVMTypeOf},
     prelude::LLVMValueRef,
 };
 
-use super::block::FunctionBlock;
+use super::{
+    block::FunctionBlock,
+    declaration::{FunctionDeclaration, Visibility},
+};
 use crate::llvm::{
     module::{AnyModule, builder::ModuleBuilder},
     types::{self, Type, function::Function, value::Value},
@@ -47,17 +51,27 @@ pub struct FunctionBuilder<'module> {
 }
 
 impl<'module> FunctionBuilder<'module> {
-    pub fn new(module: &'module ModuleBuilder, name: &str, r#type: types::Function) -> Self {
-        let name = CString::from_str(name).unwrap();
+    pub fn new(module: &'module ModuleBuilder, declaration: &FunctionDeclaration) -> Self {
+        let name = CString::from_str(declaration.name()).unwrap();
 
         let function =
         // SAFETY: The module is a valid module, the name is a null terminated string, and the type
         // exists for the duration of the call, so we're safe
-            unsafe { LLVMAddFunction(module.as_llvm_ref(), name.as_ptr(), r#type.as_llvm_ref()) };
+            unsafe { LLVMAddFunction(
+            module.as_llvm_ref(),
+            name.as_ptr(),
+            declaration.r#type().as_llvm_ref()
+        ) };
+        let linkage = match declaration.visibility() {
+            Visibility::Internal => LLVMLinkage::LLVMInternalLinkage,
+            Visibility::Export => LLVMLinkage::LLVMExternalLinkage,
+        };
+        // SAFETY: We just created the function, and the linkage is one of the correct enum values
+        unsafe { LLVMSetLinkage(function, linkage) };
 
         Self {
             function,
-            r#type,
+            r#type: declaration.r#type(),
             module,
         }
     }

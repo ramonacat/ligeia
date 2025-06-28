@@ -7,14 +7,18 @@ use llvm_sys::{
     core::{LLVMAddFunction, LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
+use thiserror::Error;
 
 use super::{FunctionId, ModuleId, built::Module};
 use crate::llvm::{
     LLVM_CONTEXT,
-    function::builder::{FunctionBuilder, FunctionReference},
+    function::{
+        builder::{FunctionBuilder, FunctionReference},
+        declaration::{FunctionDeclaration, Visibility},
+    },
     global_symbol::GlobalSymbols,
     package::context::PackageContext,
-    types::{self, Type as _},
+    types::Type as _,
 };
 
 #[derive(Debug)]
@@ -34,6 +38,12 @@ impl Display for ModuleBuildError {
 }
 
 impl Error for ModuleBuildError {}
+
+#[derive(Debug, Error)]
+pub enum FunctionImportError {
+    #[error("Function {0:?} is not exported")]
+    NotExported(FunctionId),
+}
 
 pub struct ModuleBuilder {
     id: ModuleId,
@@ -71,16 +81,16 @@ impl ModuleBuilder {
     // TODO support setting linkage (export, internal, etc.)
     pub(crate) fn define_function(
         &mut self,
-        name: &str,
-        r#type: types::Function,
+        declaration: &FunctionDeclaration,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> FunctionId {
         let id = FunctionId {
             module_id: self.id,
-            name: self.symbols.intern(name),
-            r#type,
+            name: self.symbols.intern(declaration.name()),
+            r#type: declaration.r#type(),
+            visibility: declaration.visibility(),
         };
-        let builder = FunctionBuilder::new(self, name, r#type);
+        let builder = FunctionBuilder::new(self, declaration);
 
         // TODO we should probably ask the builder to
         // verify that all blocks got built with at least a terminator
@@ -94,8 +104,16 @@ impl ModuleBuilder {
     }
 
     // TODO verify that the other module actually exports the function
-    pub(crate) fn import_function(&mut self, id: FunctionId) -> FunctionId {
+    pub(crate) fn import_function(
+        &mut self,
+        id: FunctionId,
+    ) -> Result<FunctionId, FunctionImportError> {
+        // TODO return Err instead of panicking?
         assert!(id.module_id != self.id);
+
+        if id.visibility != Visibility::Export {
+            return Err(FunctionImportError::NotExported(id));
+        }
 
         let name = self.symbols.resolve(id.name);
         let c_name = CString::from_str(&name).unwrap();
@@ -109,11 +127,12 @@ impl ModuleBuilder {
             module_id: self.id,
             name: id.name,
             r#type: id.r#type,
+            visibility: Visibility::Internal,
         };
 
         self.functions.insert(id, function);
 
-        id
+        Ok(id)
     }
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {

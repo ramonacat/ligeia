@@ -1,4 +1,5 @@
 use llvm::{
+    function::declaration::{FunctionDeclaration, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types,
@@ -11,8 +12,11 @@ fn main() {
 
     let side_module = package_builder.add_module("side");
     let side = side_module.define_function(
-        "side_fn",
-        types::Function::new(&types::U64, &[]),
+        &FunctionDeclaration::new(
+            "side_fn",
+            types::Function::new(&types::U64, &[]),
+            Visibility::Export,
+        ),
         |function| {
             let block = function.create_block("entry");
 
@@ -21,10 +25,13 @@ fn main() {
     );
 
     let main_module = package_builder.add_module("main");
-    let side = main_module.import_function(side);
+    let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
-        "other",
-        types::Function::new(&types::U64, &[&types::U64]),
+        &FunctionDeclaration::new(
+            "other",
+            types::Function::new(&types::U64, &[&types::U64]),
+            Visibility::Internal,
+        ),
         |function| {
             let block = function.create_block("entry");
 
@@ -38,8 +45,11 @@ fn main() {
         },
     );
     let main_function = main_module.define_function(
-        "main",
-        types::Function::new(&types::U64, &[&types::U64]),
+        &FunctionDeclaration::new(
+            "main",
+            types::Function::new(&types::U64, &[&types::U64]),
+            Visibility::Export,
+        ),
         |function| {
             let entry = function.create_block("entry");
 

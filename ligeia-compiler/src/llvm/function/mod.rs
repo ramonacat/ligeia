@@ -4,6 +4,7 @@ use super::{module::built::Module, types};
 
 mod block;
 pub mod builder;
+pub mod declaration;
 mod instruction_builder;
 
 #[allow(unused)]
