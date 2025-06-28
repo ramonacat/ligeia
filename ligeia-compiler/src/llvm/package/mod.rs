@@ -1,4 +1,6 @@
 pub mod builder;
+pub(in crate::llvm) mod context;
+pub(in crate::llvm) mod id;
 
 use std::rc::Rc;
 

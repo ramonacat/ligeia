@@ -4,7 +4,7 @@ pub mod built;
 use builder::ModuleBuilder;
 use built::Module;
 
-use super::{global_symbol::GlobalSymbol, types::function::Function};
+use super::{global_symbol::GlobalSymbol, package::id::PackageId, types::function::Function};
 
 pub(in crate::llvm) trait AnyModule {}
 
@@ -12,10 +12,7 @@ impl AnyModule for ModuleBuilder {}
 impl AnyModule for Module {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-// TODO This should also contain a reference to the package id? or GlobalSymbol should have a
-// reference to the specific GlobalSymbols? So that in case of building multiple packages, a mixup
-// will just result in an obvious error
-pub struct ModuleId(GlobalSymbol);
+pub struct ModuleId(PackageId, GlobalSymbol);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FunctionId {

@@ -1,27 +1,31 @@
 use std::rc::Rc;
 
-use super::Package;
+use super::{Package, context::PackageContext, id::PACKAGE_ID_GENERATOR};
 use crate::llvm::{
     global_symbol::GlobalSymbols,
     module::builder::{ModuleBuildError, ModuleBuilder},
 };
 
 pub struct PackageBuilder {
-    global_symbols: Rc<GlobalSymbols>,
+    context: PackageContext,
     modules: Vec<ModuleBuilder>,
 }
 
 impl PackageBuilder {
     pub fn new() -> Self {
         Self {
-            global_symbols: Rc::new(GlobalSymbols::new()),
+            context: PackageContext::new(
+                PACKAGE_ID_GENERATOR.next(),
+                Rc::new(GlobalSymbols::new()),
+            ),
             modules: vec![],
         }
     }
 
     pub fn add_module(&mut self, name: &str) -> &mut ModuleBuilder {
-        self.modules
-            .push(ModuleBuilder::new(self.global_symbols.clone(), name));
+        // TODO we have to assert here that there isn't already a module with the same name,
+        // otherwise the ModuleIds will be non-unique
+        self.modules.push(ModuleBuilder::new(&self.context, name));
 
         self.modules.last_mut().unwrap()
     }

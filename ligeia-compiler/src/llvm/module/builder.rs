@@ -13,6 +13,7 @@ use crate::llvm::{
     LLVM_CONTEXT,
     function::builder::{FunctionBuilder, FunctionReference},
     global_symbol::GlobalSymbols,
+    package::context::PackageContext,
     types::{self, Type as _},
 };
 
@@ -42,7 +43,7 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    pub(in crate::llvm) fn new(global_symbols: Rc<GlobalSymbols>, name: &str) -> Self {
+    pub(in crate::llvm) fn new(package_context: &PackageContext, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
@@ -53,10 +54,12 @@ impl ModuleBuilder {
             }
         });
 
+        let symbols = package_context.symbols();
+
         Self {
             reference: module,
-            id: ModuleId(global_symbols.intern(name)),
-            symbols: global_symbols,
+            id: ModuleId(package_context.id(), symbols.intern(name)),
+            symbols,
             functions: HashMap::new(),
         }
     }
@@ -135,7 +138,7 @@ impl ModuleBuilder {
                 .to_string();
 
             return Err(ModuleBuildError {
-                module_name: self.symbols.resolve(self.id.0),
+                module_name: self.symbols.resolve(self.id.1),
                 message,
             });
         }

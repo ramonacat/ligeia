@@ -18,7 +18,6 @@ use crate::llvm::{
 #[non_exhaustive]
 pub struct TerminatorToken;
 
-// TODO: can 'function and module be the same lifetime?
 pub struct InstructionBuilder<'module> {
     builder: LLVMBuilderRef,
     function_builder: &'module FunctionBuilder<'module>,

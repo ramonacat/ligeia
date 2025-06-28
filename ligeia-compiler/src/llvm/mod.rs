@@ -1,3 +1,4 @@
+// TODO the whole llvm module should go into its own crate with some cool name
 pub mod function;
 pub mod global_symbol;
 pub mod jit;
