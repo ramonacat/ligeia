@@ -7,7 +7,7 @@ use llvm_sys::{
 };
 
 use super::{FunctionDeclaration, ModuleId};
-use crate::llvm::{function::Function, global_symbol::GlobalSymbols};
+use crate::{function::Function, global_symbol::GlobalSymbols};
 
 pub struct Module {
     id: ModuleId,
@@ -24,7 +24,7 @@ impl Module {
         result
     }
 
-    pub(in crate::llvm) const unsafe fn new(
+    pub(crate) const unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
         functions: HashMap<FunctionDeclaration, LLVMValueRef>,
@@ -38,15 +38,16 @@ impl Module {
         }
     }
 
-    // TODO use it!
-    #[allow(unused)]
+    /// # Panics
+    /// If the `FunctionDeclaration` is from another module.
+    #[must_use]
     pub fn get_function(&self, id: FunctionDeclaration) -> Function {
         assert!(id.module_id == self.id);
 
         let function = self.functions.get(&id).unwrap();
 
         // SAFETY: We got a reference to the function in the HashMap, so it must be valid
-        unsafe { Function::new(self, *function, id.r#type) }
+        Function::new(self, *function, id.r#type)
     }
 
     pub(crate) fn link(&self, mut module: Self) {
@@ -60,7 +61,7 @@ impl Module {
         assert!(!is_failed, "Linking modules failed");
     }
 
-    pub(in crate::llvm) fn symbols(&self) -> Rc<GlobalSymbols> {
+    pub(crate) fn symbols(&self) -> Rc<GlobalSymbols> {
         self.symbols.clone()
     }
 }

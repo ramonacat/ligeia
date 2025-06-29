@@ -30,7 +30,7 @@ impl<'module> FunctionBlock<'module> {
         build(instruction_builder);
     }
 
-    pub(in crate::llvm) const fn as_llvm_ref(&self) -> *mut llvm_sys::LLVMBasicBlock {
+    pub(crate) const fn as_llvm_ref(&self) -> *mut llvm_sys::LLVMBasicBlock {
         self.block
     }
 

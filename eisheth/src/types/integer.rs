@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::{Type, value::Value};
-use crate::llvm::{Context, LLVM_CONTEXT};
+use crate::{Context, LLVM_CONTEXT};
 
 thread_local! {
     static U64_ID:IntegerType = IntegerType::new(LLVMInt64TypeInContext);
@@ -45,6 +45,7 @@ impl Type for U64 {
 }
 
 impl U64 {
+    #[must_use]
     pub fn const_value(value: u64) -> Value {
         // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
         // will be valid

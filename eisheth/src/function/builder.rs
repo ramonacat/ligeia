@@ -10,12 +10,12 @@ use super::{
     block::FunctionBlock,
     declaration::{FunctionDeclarationDescriptor, Visibility},
 };
-use crate::llvm::{
+use crate::{
     module::{AnyModule, builder::ModuleBuilder},
     types::{self, Type, function::Function, value::Value},
 };
 
-pub(in crate::llvm) struct FunctionReference<'module> {
+pub(crate) struct FunctionReference<'module> {
     // TODO should this be PhantomData instead? we only care about the lifetime ATM
     _module: &'module dyn AnyModule,
     reference: LLVMValueRef,
@@ -39,7 +39,7 @@ impl<'module> FunctionReference<'module> {
         self.r#type
     }
 
-    pub(in crate::llvm) const fn value(&self) -> LLVMValueRef {
+    pub(crate) const fn value(&self) -> LLVMValueRef {
         self.reference
     }
 }
@@ -51,6 +51,9 @@ pub struct FunctionBuilder<'module> {
 }
 
 impl<'module> FunctionBuilder<'module> {
+    /// # Panics
+    /// Will panic if the function name cannot be expressed as a `CString`
+    #[must_use]
     pub fn new(
         module: &'module ModuleBuilder,
         declaration: &FunctionDeclarationDescriptor,
@@ -79,11 +82,16 @@ impl<'module> FunctionBuilder<'module> {
         }
     }
 
-    pub(crate) fn create_block(&'module self, name: &str) -> FunctionBlock<'module> {
+    #[must_use]
+    pub fn create_block(&'module self, name: &str) -> FunctionBlock<'module> {
         FunctionBlock::new(self, name)
     }
 
-    pub(crate) fn get_argument(&self, index: u32) -> Option<Value> {
+    /// # Panics
+    /// TODO Is this even a sensible check? Can this ever happen?
+    /// If the received argument's type does not match the declared type.
+    #[must_use]
+    pub fn get_argument(&self, index: u32) -> Option<Value> {
         let argument_type = self.r#type.get_argument(index as usize)?;
 
         // SAFETY: We've ensured that the `index` is not out-of-bounds while getting the argument
@@ -98,15 +106,15 @@ impl<'module> FunctionBuilder<'module> {
         Some(unsafe { Value::new(argument) })
     }
 
-    pub(in crate::llvm) const fn build(self) -> LLVMValueRef {
+    pub(crate) const fn build(self) -> LLVMValueRef {
         self.function
     }
 
-    pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMValueRef {
+    pub(crate) const fn as_llvm_ref(&self) -> LLVMValueRef {
         self.function
     }
 
-    pub(in crate::llvm) const fn module(&self) -> &'module ModuleBuilder {
+    pub(crate) const fn module(&self) -> &'module ModuleBuilder {
         self.module
     }
 }

@@ -1,6 +1,6 @@
 [workspace]
 resolver="3"
-members = ["ligeia-compiler"]
+members = [ "eisheth","ligeia-compiler"]
 
 [workspace.lints.rust]
 warnings = "deny"

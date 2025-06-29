@@ -1,11 +1,9 @@
-use llvm::{
+use eisheth::{
     function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types,
 };
-
-mod llvm;
 
 fn main() {
     let mut package_builder = PackageBuilder::new();

@@ -5,11 +5,11 @@ pub struct Value {
 }
 
 impl Value {
-    pub(in crate::llvm) const unsafe fn new(value: LLVMValueRef) -> Self {
+    pub(crate) const unsafe fn new(value: LLVMValueRef) -> Self {
         Self { reference: value }
     }
 
-    pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMValueRef {
+    pub(crate) const fn as_llvm_ref(&self) -> LLVMValueRef {
         self.reference
     }
 }

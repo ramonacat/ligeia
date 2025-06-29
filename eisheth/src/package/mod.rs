@@ -1,6 +1,6 @@
 pub mod builder;
-pub(in crate::llvm) mod context;
-pub(in crate::llvm) mod id;
+pub(crate) mod context;
+pub(crate) mod id;
 
 use std::rc::Rc;
 
@@ -11,15 +11,15 @@ pub struct Package {
 }
 
 impl Package {
-    pub(in crate::llvm) const fn new(module: Module) -> Self {
+    pub(crate) const fn new(module: Module) -> Self {
         Self { module }
     }
 
-    pub(in crate::llvm) fn into_module(self) -> Module {
+    pub(crate) fn into_module(self) -> Module {
         self.module
     }
 
-    pub(in crate::llvm) fn symbols(&self) -> Rc<GlobalSymbols> {
+    pub(crate) fn symbols(&self) -> Rc<GlobalSymbols> {
         self.module.symbols()
     }
 }

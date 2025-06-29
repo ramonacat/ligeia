@@ -17,6 +17,9 @@ impl Type for Function {
 }
 
 impl Function {
+    /// # Panics
+    /// If there are more params for the function than an u32 can hold. If this happens, you might
+    /// want to consider refactoring your code.
     pub fn new(r#return: &dyn Type, arguments: &[&dyn Type]) -> Self {
         let mut param_types: Vec<_> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
 
@@ -35,7 +38,7 @@ impl Function {
         }
     }
 
-    pub(in crate::llvm) fn get_argument(&self, index: usize) -> Option<LLVMTypeRef> {
+    pub(crate) fn get_argument(&self, index: usize) -> Option<LLVMTypeRef> {
         // SAFETY: We know that reference is valid till self is dropped
         let param_types_count = unsafe { LLVMCountParamTypes(self.reference) } as usize;
 

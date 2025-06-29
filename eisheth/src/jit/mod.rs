@@ -40,7 +40,11 @@ pub struct Jit {
 }
 
 impl Jit {
-    pub(crate) fn new(package: Package) -> Self {
+    /// # Panics
+    /// Will panic if the execution engine cannot be crated.
+    /// TODO Return an error instead of panicing in that case.
+    #[must_use]
+    pub fn new(package: Package) -> Self {
         let token = *JIT_SETUP;
         let symbols = package.symbols();
         let module = package.into_module();
@@ -77,7 +81,13 @@ impl Jit {
         }
     }
 
-    pub(crate) unsafe fn get_function<TFunction>(
+    /// # Panics
+    /// If the name of the function cannot be converted to a `CString`
+    /// # Safety
+    /// The caller must ensure that the signature on the Rust side matches the signature of the
+    /// defined function, and that the function itself is memory-safe.
+    #[must_use]
+    pub unsafe fn get_function<TFunction>(
         &self,
         id: FunctionDeclaration,
     ) -> JitFunction<TFunction> {

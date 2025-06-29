@@ -23,6 +23,9 @@ macro_rules! jit_function_impl {
         > JitFunction<
             unsafe extern "C" fn ($($argument),*) -> TReturn
         > {
+            /// # Safety
+            /// The function signature on the Rust side must match the jitted function, and the
+            /// function itself must be memory-safe
             #[allow(non_snake_case, clippy::too_many_arguments)]
             pub unsafe fn call(
                 &self,
@@ -41,8 +44,11 @@ macro_rules! jit_function_impl {
     };
 }
 
-#[allow(unused)]
 impl<TReturn> JitFunction<unsafe extern "C" fn() -> TReturn> {
+    /// # Safety
+    /// The function must be memory safe, and the signature on the Rust side must match the jitted
+    /// function's signature.
+    #[must_use]
     pub unsafe fn call(&self) -> TReturn {
         let callable: unsafe extern "C" fn() -> TReturn =
             // SAFETY: The caller has ensured that the signature matches

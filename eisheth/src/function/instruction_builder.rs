@@ -9,7 +9,7 @@ use llvm_sys::{
 };
 
 use super::{block::FunctionBlock, builder::FunctionBuilder};
-use crate::llvm::{
+use crate::{
     LLVM_CONTEXT,
     module::{FunctionDeclaration, builder::ModuleBuilder},
     types::{Type, value::Value},
@@ -39,7 +39,7 @@ impl<'module> InstructionBuilder<'module> {
         }
     }
 
-    pub(crate) fn add(&self, left: &Value, right: &Value, name: &str) -> Value {
+    pub fn add(&self, left: &Value, right: &Value, name: &str) -> Value {
         let name = CString::from_str(name).unwrap();
 
         // SAFETY: the builder is valid and positioned, left and right exist for duration of the
@@ -56,7 +56,7 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { Value::new(value) }
     }
 
-    pub(crate) fn direct_call(
+    pub fn direct_call(
         &self,
         function: FunctionDeclaration,
         arguments: &[Value],
@@ -82,7 +82,7 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { Value::new(result) }
     }
 
-    pub(crate) fn r#return(&self, sum: &Value) -> TerminatorToken {
+    pub fn r#return(&self, sum: &Value) -> TerminatorToken {
         // SAFETY: we've a valid, positioned builder and the value must exist at least for the
         // duration of the call, so we're good
         unsafe { LLVMBuildRet(self.builder, sum.as_llvm_ref()) };

@@ -6,7 +6,7 @@ use std::{
 use thiserror::Error;
 
 use super::{Package, context::PackageContext, id::PACKAGE_ID_GENERATOR};
-use crate::llvm::{
+use crate::{
     global_symbol::GlobalSymbols,
     module::builder::{ModuleBuildError, ModuleBuilder},
 };
@@ -22,6 +22,12 @@ pub struct PackageBuilder {
     modules: HashMap<String, ModuleBuilder>,
 }
 
+impl Default for PackageBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PackageBuilder {
     pub fn new() -> Self {
         Self {
@@ -33,6 +39,8 @@ impl PackageBuilder {
         }
     }
 
+    /// # Errors
+    /// Will return an error if the package already contains a module with the name given.
     pub fn add_module(
         &mut self,
         name: impl Into<String>,
@@ -47,7 +55,13 @@ impl PackageBuilder {
         Ok(entry.or_insert_with(|| ModuleBuilder::new(&self.context, &name)))
     }
 
-    pub(crate) fn build(self) -> Result<Package, ModuleBuildError> {
+    /// # Errors
+    /// This will error out and return the error for the first module that fails to build.
+    /// # Panics
+    /// If there are no modules in the package
+    /// TODO should we return all the errors as a Vec<>, instead of giving up after first failed
+    /// module?
+    pub fn build(self) -> Result<Package, ModuleBuildError> {
         let mut built_modules = self
             .modules
             .into_values()

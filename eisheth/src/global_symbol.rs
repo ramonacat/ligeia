@@ -2,7 +2,7 @@ use std::sync::RwLock;
 
 use string_interner::{DefaultStringInterner, symbol::SymbolU32};
 
-pub(in crate::llvm) struct GlobalSymbols {
+pub(crate) struct GlobalSymbols {
     interner: RwLock<DefaultStringInterner>,
 }
 

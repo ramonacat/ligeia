@@ -18,6 +18,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "eisheth"
+version = "0.1.0"
+dependencies = [
+ "llvm-sys",
+ "paste",
+ "string-interner",
+ "thiserror",
+]
+
+[[package]]
 name = "foldhash"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -48,10 +58,7 @@ checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 name = "ligeia"
 version = "0.1.0"
 dependencies = [
- "llvm-sys",
- "paste",
- "string-interner",
- "thiserror",
+ "eisheth",
 ]
 
 [[package]]

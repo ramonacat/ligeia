@@ -10,7 +10,7 @@ use llvm_sys::{
 use thiserror::Error;
 
 use super::{FunctionDeclaration, ModuleId, built::Module};
-use crate::llvm::{
+use crate::{
     LLVM_CONTEXT,
     function::{
         builder::{FunctionBuilder, FunctionReference},
@@ -55,7 +55,7 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    pub(in crate::llvm) fn new(package_context: &PackageContext, name: &str) -> Self {
+    pub(crate) fn new(package_context: &PackageContext, name: &str) -> Self {
         let module = LLVM_CONTEXT.with(|context| {
             let name = CString::from_str(name).unwrap();
 
@@ -76,11 +76,11 @@ impl ModuleBuilder {
         }
     }
 
-    pub(in crate::llvm) const fn as_llvm_ref(&self) -> LLVMModuleRef {
+    pub(crate) const fn as_llvm_ref(&self) -> LLVMModuleRef {
         self.reference
     }
 
-    pub(crate) fn define_function(
+    pub fn define_function(
         &mut self,
         declaration: &FunctionDeclarationDescriptor,
         implement: impl FnOnce(&FunctionBuilder),
@@ -104,7 +104,12 @@ impl ModuleBuilder {
         id
     }
 
-    pub(crate) fn import_function(
+    /// # Panics
+    /// Will panic if the name cannot be converted to a `CString`
+    /// # Errors
+    /// Will return an error if the function is defined in this module, or if the other module is
+    /// not exporting it.
+    pub fn import_function(
         &mut self,
         id: FunctionDeclaration,
     ) -> Result<FunctionDeclaration, FunctionImportError> {
@@ -176,7 +181,7 @@ impl ModuleBuilder {
         Ok(unsafe { Module::new(self.id, reference, functions, self.symbols.clone()) })
     }
 
-    pub(in crate::llvm) fn get_function(&self, function: FunctionDeclaration) -> FunctionReference {
+    pub(crate) fn get_function(&self, function: FunctionDeclaration) -> FunctionReference {
         let value = self.functions.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they

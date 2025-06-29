@@ -9,7 +9,7 @@ use super::{
     types::function::Function,
 };
 
-pub(in crate::llvm) trait AnyModule {}
+pub(crate) trait AnyModule {}
 
 impl AnyModule for ModuleBuilder {}
 impl AnyModule for Module {}
@@ -26,7 +26,7 @@ pub struct FunctionDeclaration {
 }
 
 impl FunctionDeclaration {
-    pub(in crate::llvm) const fn name(&self) -> GlobalSymbol {
+    pub(crate) const fn name(&self) -> GlobalSymbol {
         self.name
     }
 }
