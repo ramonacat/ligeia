@@ -9,7 +9,6 @@ pub enum Visibility {
 pub struct FunctionDeclarationDescriptor {
     name: String,
     r#type: types::Function,
-    #[allow(unused)]
     visibility: Visibility,
 }
 

@@ -80,7 +80,6 @@ impl ModuleBuilder {
         self.reference
     }
 
-    // TODO support setting linkage (export, internal, etc.)
     pub(crate) fn define_function(
         &mut self,
         declaration: &FunctionDeclarationDescriptor,
