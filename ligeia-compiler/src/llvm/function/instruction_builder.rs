@@ -11,7 +11,7 @@ use llvm_sys::{
 use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::llvm::{
     LLVM_CONTEXT,
-    module::{FunctionId, builder::ModuleBuilder},
+    module::{FunctionDeclaration, builder::ModuleBuilder},
     types::{Type, value::Value},
 };
 
@@ -58,7 +58,7 @@ impl<'module> InstructionBuilder<'module> {
 
     pub(crate) fn direct_call(
         &self,
-        function: FunctionId,
+        function: FunctionDeclaration,
         arguments: &[Value],
         name: &str,
     ) -> Value {

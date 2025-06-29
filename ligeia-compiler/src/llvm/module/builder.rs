@@ -9,12 +9,12 @@ use llvm_sys::{
 };
 use thiserror::Error;
 
-use super::{FunctionId, ModuleId, built::Module};
+use super::{FunctionDeclaration, ModuleId, built::Module};
 use crate::llvm::{
     LLVM_CONTEXT,
     function::{
         builder::{FunctionBuilder, FunctionReference},
-        declaration::{FunctionDeclaration, Visibility},
+        declaration::{FunctionDeclarationDescriptor, Visibility},
     },
     global_symbol::GlobalSymbols,
     package::context::PackageContext,
@@ -42,16 +42,16 @@ impl Error for ModuleBuildError {}
 #[derive(Debug, Error)]
 pub enum FunctionImportError {
     #[error("Function {0:?} is not exported")]
-    NotExported(FunctionId),
+    NotExported(FunctionDeclaration),
     #[error("Function {0:?} cannot be imported into the same module where it was defined")]
-    DefinedInThisModule(FunctionId),
+    DefinedInThisModule(FunctionDeclaration),
 }
 
 pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
-    functions: HashMap<FunctionId, LLVMValueRef>,
+    functions: HashMap<FunctionDeclaration, LLVMValueRef>,
 }
 
 impl ModuleBuilder {
@@ -83,10 +83,10 @@ impl ModuleBuilder {
     // TODO support setting linkage (export, internal, etc.)
     pub(crate) fn define_function(
         &mut self,
-        declaration: &FunctionDeclaration,
+        declaration: &FunctionDeclarationDescriptor,
         implement: impl FnOnce(&FunctionBuilder),
-    ) -> FunctionId {
-        let id = FunctionId {
+    ) -> FunctionDeclaration {
+        let id = FunctionDeclaration {
             module_id: self.id,
             name: self.symbols.intern(declaration.name()),
             r#type: declaration.r#type(),
@@ -107,8 +107,8 @@ impl ModuleBuilder {
 
     pub(crate) fn import_function(
         &mut self,
-        id: FunctionId,
-    ) -> Result<FunctionId, FunctionImportError> {
+        id: FunctionDeclaration,
+    ) -> Result<FunctionDeclaration, FunctionImportError> {
         if id.module_id == self.id {
             return Err(FunctionImportError::DefinedInThisModule(id));
         }
@@ -125,7 +125,7 @@ impl ModuleBuilder {
             // pointers being valid
             unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
 
-        let id = FunctionId {
+        let id = FunctionDeclaration {
             module_id: self.id,
             name: id.name,
             r#type: id.r#type,
@@ -177,7 +177,7 @@ impl ModuleBuilder {
         Ok(unsafe { Module::new(self.id, reference, functions, self.symbols.clone()) })
     }
 
-    pub(in crate::llvm) fn get_function(&self, function: FunctionId) -> FunctionReference {
+    pub(in crate::llvm) fn get_function(&self, function: FunctionDeclaration) -> FunctionReference {
         let value = self.functions.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they

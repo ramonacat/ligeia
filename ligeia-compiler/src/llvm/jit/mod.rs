@@ -17,7 +17,7 @@ use llvm_sys::{
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
 
-use super::{global_symbol::GlobalSymbols, module::FunctionId, package::Package};
+use super::{global_symbol::GlobalSymbols, module::FunctionDeclaration, package::Package};
 
 #[derive(Clone, Copy)]
 struct JITToken;
@@ -77,7 +77,10 @@ impl Jit {
         }
     }
 
-    pub(crate) unsafe fn get_function<TFunction>(&self, id: FunctionId) -> JitFunction<TFunction> {
+    pub(crate) unsafe fn get_function<TFunction>(
+        &self,
+        id: FunctionDeclaration,
+    ) -> JitFunction<TFunction> {
         let name = CString::from_str(&self.symbols.resolve(id.name())).unwrap();
 
         // SAFETY: We have a valid `execution_engine`, valid null-terminated name. The function

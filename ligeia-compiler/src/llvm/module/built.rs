@@ -6,13 +6,13 @@ use llvm_sys::{
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
 
-use super::{FunctionId, ModuleId};
+use super::{FunctionDeclaration, ModuleId};
 use crate::llvm::{function::Function, global_symbol::GlobalSymbols};
 
 pub struct Module {
     id: ModuleId,
     reference: LLVMModuleRef,
-    functions: HashMap<FunctionId, LLVMValueRef>,
+    functions: HashMap<FunctionDeclaration, LLVMValueRef>,
     symbols: Rc<GlobalSymbols>,
 }
 
@@ -27,7 +27,7 @@ impl Module {
     pub(in crate::llvm) const unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
-        functions: HashMap<FunctionId, LLVMValueRef>,
+        functions: HashMap<FunctionDeclaration, LLVMValueRef>,
         symbols: Rc<GlobalSymbols>,
     ) -> Self {
         Self {
@@ -40,7 +40,7 @@ impl Module {
 
     // TODO use it!
     #[allow(unused)]
-    pub fn get_function(&self, id: FunctionId) -> Function {
+    pub fn get_function(&self, id: FunctionDeclaration) -> Function {
         assert!(id.module_id == self.id);
 
         let function = self.functions.get(&id).unwrap();

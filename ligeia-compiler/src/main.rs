@@ -1,5 +1,5 @@
 use llvm::{
-    function::declaration::{FunctionDeclaration, Visibility},
+    function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types,
@@ -12,7 +12,7 @@ fn main() {
 
     let side_module = package_builder.add_module("side").unwrap();
     let side = side_module.define_function(
-        &FunctionDeclaration::new(
+        &FunctionDeclarationDescriptor::new(
             "side_fn",
             types::Function::new(&types::U64, &[]),
             Visibility::Export,
@@ -27,7 +27,7 @@ fn main() {
     let main_module = package_builder.add_module("main").unwrap();
     let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
-        &FunctionDeclaration::new(
+        &FunctionDeclarationDescriptor::new(
             "other",
             types::Function::new(&types::U64, &[&types::U64]),
             Visibility::Internal,
@@ -45,7 +45,7 @@ fn main() {
         },
     );
     let main_function = main_module.define_function(
-        &FunctionDeclaration::new(
+        &FunctionDeclarationDescriptor::new(
             "main",
             types::Function::new(&types::U64, &[&types::U64]),
             Visibility::Export,

@@ -6,14 +6,14 @@ pub enum Visibility {
     Export,
 }
 
-pub struct FunctionDeclaration {
+pub struct FunctionDeclarationDescriptor {
     name: String,
     r#type: types::Function,
     #[allow(unused)]
     visibility: Visibility,
 }
 
-impl FunctionDeclaration {
+impl FunctionDeclarationDescriptor {
     pub fn new(name: impl Into<String>, r#type: types::Function, visibility: Visibility) -> Self {
         Self {
             name: name.into(),

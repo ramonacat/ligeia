@@ -18,16 +18,14 @@ impl AnyModule for Module {}
 pub struct ModuleId(PackageId, GlobalSymbol);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-// TODO this should have some other name, this is the real FunctionDeclaration, perhaps the other
-// should be renamed?
-pub struct FunctionId {
+pub struct FunctionDeclaration {
     module_id: ModuleId,
     name: GlobalSymbol,
     r#type: Function,
     visibility: Visibility,
 }
 
-impl FunctionId {
+impl FunctionDeclaration {
     pub(in crate::llvm) const fn name(&self) -> GlobalSymbol {
         self.name
     }

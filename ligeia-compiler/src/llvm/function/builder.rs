@@ -8,7 +8,7 @@ use llvm_sys::{
 
 use super::{
     block::FunctionBlock,
-    declaration::{FunctionDeclaration, Visibility},
+    declaration::{FunctionDeclarationDescriptor, Visibility},
 };
 use crate::llvm::{
     module::{AnyModule, builder::ModuleBuilder},
@@ -51,7 +51,10 @@ pub struct FunctionBuilder<'module> {
 }
 
 impl<'module> FunctionBuilder<'module> {
-    pub fn new(module: &'module ModuleBuilder, declaration: &FunctionDeclaration) -> Self {
+    pub fn new(
+        module: &'module ModuleBuilder,
+        declaration: &FunctionDeclarationDescriptor,
+    ) -> Self {
         let name = CString::from_str(declaration.name()).unwrap();
 
         let function =
