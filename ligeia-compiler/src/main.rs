@@ -1,3 +1,5 @@
+mod vector;
+
 use eisheth::{
     function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
@@ -18,11 +20,31 @@ fn main() {
         |function| {
             let block = function.create_block("entry");
 
-            block.build(|i| i.r#return(&types::U64::const_value(7)));
+            block.build(|i| i.r#return(Some(&types::U64::const_value(7))));
         },
     );
 
+    let vector_definition = vector::define(&mut package_builder);
+
     let main_module = package_builder.add_module("main").unwrap();
+
+    let imported_defintion = vector_definition.import_into(main_module);
+
+    let test_vector = main_module.define_global(
+        "test vector",
+        imported_defintion.r#type(),
+        &imported_defintion.const_null(),
+    );
+
+    main_module.define_global_initializer("init_test_vector", |function| {
+        let entry = function.create_block("entry");
+        entry.build(|i| {
+            imported_defintion.initialize(&i, test_vector);
+
+            i.r#return(None)
+        });
+    });
+
     let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
         &FunctionDeclarationDescriptor::new(
@@ -38,7 +60,7 @@ fn main() {
                 let right = types::U64::const_value(11);
                 let sum = i.add(&left, &right, "sum");
 
-                i.r#return(&sum)
+                i.r#return(Some(&sum))
             });
         },
     );
@@ -48,7 +70,7 @@ fn main() {
             types::Function::new(&types::U64, &[&types::U64]),
             Visibility::Export,
         ),
-        |function| {
+        move |function| {
             let entry = function.create_block("entry");
 
             entry.build(|i| {
@@ -60,7 +82,7 @@ fn main() {
                 let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
 
-                i.r#return(&sum3)
+                i.r#return(Some(&sum3))
             });
         },
     );
@@ -68,9 +90,7 @@ fn main() {
     let package = match package_builder.build() {
         Ok(package) => package,
         Err(error) => {
-            eprintln!("{error}");
-
-            return;
+            panic!("{error}");
         }
     };
     let jit = Jit::new(package);

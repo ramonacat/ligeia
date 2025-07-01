@@ -18,6 +18,7 @@ impl AnyModule for Module {}
 pub struct ModuleId(PackageId, GlobalSymbol);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// TODO This is probably like FunctionDescriptor or something? It's not really a declaration
 pub struct FunctionDeclaration {
     module_id: ModuleId,
     name: GlobalSymbol,

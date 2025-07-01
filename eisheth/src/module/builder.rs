@@ -3,8 +3,13 @@ use std::{
 };
 
 use llvm_sys::{
+    LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
-    core::{LLVMAddFunction, LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext},
+    core::{
+        LLVMAddFunction, LLVMAddGlobal, LLVMArrayType2, LLVMConstArray2, LLVMConstStructInContext,
+        LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext, LLVMSetInitializer,
+        LLVMSetLinkage, LLVMStructType,
+    },
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
 use thiserror::Error;
@@ -18,8 +23,12 @@ use crate::{
     },
     global_symbol::GlobalSymbols,
     package::context::PackageContext,
-    types::Type as _,
+    types::{self, Type, value::Value},
 };
+
+thread_local! {
+    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(&types::Void, &[]);
+}
 
 #[derive(Debug)]
 pub struct ModuleBuildError {
@@ -52,6 +61,7 @@ pub struct ModuleBuilder {
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
     functions: HashMap<FunctionDeclaration, LLVMValueRef>,
+    global_initializers: Vec<FunctionDeclaration>,
 }
 
 impl ModuleBuilder {
@@ -73,6 +83,7 @@ impl ModuleBuilder {
             id: ModuleId(package_context.id(), symbols.intern(name)),
             symbols,
             functions: HashMap::new(),
+            global_initializers: vec![],
         }
     }
 
@@ -102,6 +113,24 @@ impl ModuleBuilder {
         self.functions.insert(id, function);
 
         id
+    }
+
+    pub fn define_global_initializer(
+        &mut self,
+        name: &str,
+        implement: impl FnOnce(&FunctionBuilder),
+    ) {
+        let function = GLOBAL_INITIALIZER_TYPE.with(|initializer| {
+            self.define_function(
+                &FunctionDeclarationDescriptor::new(
+                    format!("global_initializer_{name}"),
+                    *initializer,
+                    Visibility::Internal,
+                ),
+                implement,
+            )
+        });
+        self.global_initializers.push(function);
     }
 
     /// # Panics
@@ -142,6 +171,8 @@ impl ModuleBuilder {
     }
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
+        self.build_global_initializers();
+
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
         // `LLVMAbortProcessAction`, and `out_message` is passed as a pointer to a pointer, so
@@ -167,7 +198,6 @@ impl ModuleBuilder {
                 message,
             });
         }
-
         // SAFETY: We have a valid, non-null `reference`, so this function can't fail
         unsafe { LLVMDumpModule(self.reference) };
 
@@ -177,8 +207,19 @@ impl ModuleBuilder {
         let mut functions = HashMap::new();
         std::mem::swap(&mut functions, &mut self.functions);
 
+        let mut global_initializers = vec![];
+        std::mem::swap(&mut global_initializers, &mut self.global_initializers);
+
         // SAFETY: We have ensured that the reference is not owned by this current object
-        Ok(unsafe { Module::new(self.id, reference, functions, self.symbols.clone()) })
+        Ok(unsafe {
+            Module::new(
+                self.id,
+                reference,
+                functions,
+                self.symbols.clone(),
+                global_initializers,
+            )
+        })
     }
 
     pub(crate) fn get_function(&self, function: FunctionDeclaration) -> FunctionReference {
@@ -188,6 +229,107 @@ impl ModuleBuilder {
         // belong to this module, so as long as the function reference has a life time at least
         // equivalent to the lifetime of the Module, the value will remain valid
         unsafe { FunctionReference::new(self, *value, function.r#type) }
+    }
+
+    /// # Panics
+    /// This function can panic if the `name` cannot be converted into a `CString`
+    pub fn define_global(&self, name: &str, r#type: &dyn Type, value: &Value) -> Value {
+        let name = CString::from_str(name).unwrap();
+        // SAFETY: the module reference, type and name are all valid pointers for the duration of
+        // the call
+        let global = unsafe { LLVMAddGlobal(self.reference, r#type.as_llvm_ref(), name.as_ptr()) };
+
+        // SAFETY: We just created the global, and the value must be correct
+        unsafe { LLVMSetInitializer(global, value.as_llvm_ref()) };
+
+        // SAFETY: We just created the global, and it will not ever be destroyed
+        // TODO: Should we return another type, so that the global can actually be destroyed when
+        // it's dropped or something? or will it just bring more confusion?
+        unsafe { Value::new(global) }
+    }
+
+    // TODO some cleaner abstractions here are definitely required, we should verify if all these
+    // leaks are needed (some arguments may just need to live for the length of the call).
+    fn build_global_initializers(&self) {
+        if self.global_initializers.is_empty() {
+            return;
+        }
+
+        // TODO this should be an honest to god global static, that depends on context's lifetime
+        let initializer_element_types = Box::leak(Box::new(vec![
+            types::U32.as_llvm_ref(),
+            types::Pointer.as_llvm_ref(),
+            types::Pointer.as_llvm_ref(),
+        ]));
+
+        // SAFETY: The element types are leaked, and were just correctly created
+        let initializers_type = unsafe {
+            LLVMStructType(
+                initializer_element_types.as_mut_ptr(),
+                u32::try_from(initializer_element_types.len()).unwrap(),
+                0,
+            )
+        };
+
+        let initializers_array_type =
+            // SAFETY: The initializers_type was just crated, so it's valid
+            unsafe { LLVMArrayType2(initializers_type, self.global_initializers.len() as u64) };
+
+        // SAFETY: The module reference is kept valid as long as `self` is, the
+        // initializers_array_type was just created, the name is allocated on the spot
+        let global = unsafe {
+            LLVMAddGlobal(
+                self.reference,
+                initializers_array_type,
+                CString::from_str("llvm.global_ctors").unwrap().as_ptr(),
+            )
+        };
+
+        // SAFETY: The global was just crated, it's valid
+        unsafe { LLVMSetLinkage(global, LLVMLinkage::LLVMAppendingLinkage) };
+
+        let global_initializers: Vec<_> = self
+            .global_initializers
+            .iter()
+            .map(|i| {
+                LLVM_CONTEXT.with(|context| {
+                    // TODO can we keep this as a field or something instead?
+                    let values = Box::leak(Box::new(vec![
+                        types::U32::const_value(0).as_llvm_ref(), // TODO this is priority, make it configurable
+                        self.get_function(*i).value(),
+                        types::Pointer::const_null().as_llvm_ref(), // TODO this is pointer to the intialized
+                                                                    // data, make it configurable
+                    ]));
+
+                    // SAFETY: The context is always valid, the values were created above and are
+                    // leaked and never destroyed
+                    unsafe {
+                        LLVMConstStructInContext(
+                            context.as_llvm_ref(),
+                            values.as_mut_ptr(),
+                            u32::try_from(values.len()).unwrap(),
+                            0,
+                        )
+                    }
+                })
+            })
+            .collect();
+
+        // TODO keep as a field instead of leaking
+        let global_initializers = Box::leak(Box::new(global_initializers));
+
+        // SAFETY: The global_initializers vec is leaked and never dies, the initializers_type is
+        // initialized
+        let initializers = unsafe {
+            LLVMConstArray2(
+                initializers_type,
+                global_initializers.as_mut_ptr(),
+                global_initializers.len() as u64,
+            )
+        };
+        // SAFETY: The initializers never get destroyed, as well as the global and both were just
+        // created
+        unsafe { LLVMSetInitializer(global, initializers) };
     }
 }
 

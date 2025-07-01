@@ -24,11 +24,12 @@ impl Module {
         result
     }
 
-    pub(crate) const unsafe fn new(
+    pub(crate) unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
         functions: HashMap<FunctionDeclaration, LLVMValueRef>,
         symbols: Rc<GlobalSymbols>,
+        _global_initializers: Vec<FunctionDeclaration>,
     ) -> Self {
         Self {
             id,

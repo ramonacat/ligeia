@@ -5,7 +5,7 @@ use super::{module::built::Module, types};
 mod block;
 pub mod builder;
 pub mod declaration;
-mod instruction_builder;
+pub mod instruction_builder;
 
 #[allow(unused)]
 pub struct Function<'module> {

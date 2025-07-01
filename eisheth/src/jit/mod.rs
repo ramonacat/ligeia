@@ -12,7 +12,8 @@ use function::JitFunction;
 use llvm_sys::{
     execution_engine::{
         LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine, LLVMExecutionEngineRef,
-        LLVMGetFunctionAddress, LLVMLinkInMCJIT,
+        LLVMGetFunctionAddress, LLVMLinkInMCJIT, LLVMRunStaticConstructors,
+        LLVMRunStaticDestructors,
     },
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
@@ -74,6 +75,9 @@ impl Jit {
             unsafe { engine.assume_init() }
         };
 
+        // SAFETY: We just initialized the engine, it's valid and ready to run static constructors
+        unsafe { LLVMRunStaticConstructors(execution_engine) };
+
         Self {
             _token: token,
             execution_engine,
@@ -105,6 +109,8 @@ impl Jit {
 
 impl Drop for Jit {
     fn drop(&mut self) {
+        // SAFETY: We didn't dispose the execution_engine, so we can run the destructors
+        unsafe { LLVMRunStaticDestructors(self.execution_engine) };
         // SAFETY: If Jit is dropped, then nobody should be executing any JITted code anymore, so
         // we are free to drop it.
         unsafe { LLVMDisposeExecutionEngine(self.execution_engine) };

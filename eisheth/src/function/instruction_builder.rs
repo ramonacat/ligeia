@@ -2,7 +2,8 @@ use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use llvm_sys::{
     core::{
-        LLVMBuildAdd, LLVMBuildCall2, LLVMBuildRet, LLVMCreateBuilderInContext, LLVMDisposeBuilder,
+        LLVMBuildAdd, LLVMBuildArrayMalloc, LLVMBuildCall2, LLVMBuildMalloc, LLVMBuildRet,
+        LLVMBuildRetVoid, LLVMBuildStore, LLVMCreateBuilderInContext, LLVMDisposeBuilder,
         LLVMPositionBuilderAtEnd,
     },
     prelude::LLVMBuilderRef,
@@ -39,6 +40,9 @@ impl<'module> InstructionBuilder<'module> {
         }
     }
 
+    /// # Panics
+    /// Can panic if the name cannot be converted to a `CString`
+    #[must_use]
     pub fn add(&self, left: &Value, right: &Value, name: &str) -> Value {
         let name = CString::from_str(name).unwrap();
 
@@ -56,6 +60,8 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { Value::new(value) }
     }
 
+    /// # Panics
+    /// Can panic if the name cannot be converted to a `CString`
     pub fn direct_call(
         &self,
         function: FunctionDeclaration,
@@ -82,16 +88,66 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { Value::new(result) }
     }
 
-    pub fn r#return(&self, sum: &Value) -> TerminatorToken {
-        // SAFETY: we've a valid, positioned builder and the value must exist at least for the
-        // duration of the call, so we're good
-        unsafe { LLVMBuildRet(self.builder, sum.as_llvm_ref()) };
+    /// # Panics
+    /// Can panic if the name cannot be converted to a `CString`
+    pub fn malloc(&self, r#type: &dyn Type, name: &str) -> Value {
+        let name = CString::from_str(name).unwrap();
+        // SAFETY: All the pointers come from wrappers ensuring their validity
+        let value = unsafe { LLVMBuildMalloc(self.builder, r#type.as_llvm_ref(), name.as_ptr()) };
+
+        // SAFETY: We just crated the value, it must be valid
+        unsafe { Value::new(value) }
+    }
+
+    /// # Panics
+    /// Can panic if the name cannot be converted to a `CString`
+    pub fn malloc_array(&self, r#type: &dyn Type, length: &Value, name: &str) -> Value {
+        let name = CString::from_str(name).unwrap();
+        // SAFETY: All pointers come from wrappers ensuring their validity
+        let value = unsafe {
+            LLVMBuildArrayMalloc(
+                self.builder,
+                r#type.as_llvm_ref(),
+                length.as_llvm_ref(),
+                name.as_ptr(),
+            )
+        };
+
+        // SAFETY: We just crated the value, the pointer is valid
+        unsafe { Value::new(value) }
+    }
+
+    pub fn store(&self, target_pointer: &Value, value: &Value) {
+        // SAFETY: All the pointers come from safe wrappers that ensure they're valid
+        unsafe {
+            LLVMBuildStore(
+                self.builder,
+                value.as_llvm_ref(),
+                target_pointer.as_llvm_ref(),
+            )
+        };
+    }
+
+    #[must_use]
+    pub fn r#return(&self, value: Option<&Value>) -> TerminatorToken {
+        if let Some(value) = value {
+            // SAFETY: we've a valid, positioned builder and the value must exist at least for the
+            // duration of the call, so we're good
+            unsafe { LLVMBuildRet(self.builder, value.as_llvm_ref()) };
+        } else {
+            // SAFETY: we have a valid positioned builder
+            unsafe { LLVMBuildRetVoid(self.builder) };
+        }
 
         TerminatorToken
     }
 
     const fn module(&self) -> &ModuleBuilder {
         self.function_builder.module()
+    }
+
+    pub(crate) const fn builder(&self) -> LLVMBuilderRef {
+        self.builder
     }
 }
 

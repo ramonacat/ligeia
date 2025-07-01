@@ -1,13 +1,19 @@
+use std::marker::PhantomData;
+
 use llvm_sys::{
     core::{LLVMCountParamTypes, LLVMFunctionType, LLVMGetParamTypes},
     prelude::LLVMTypeRef,
 };
 
 use super::Type;
+use crate::Context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {
     reference: LLVMTypeRef,
+    // While the Function itself does not depend on the context, its constituent types (return,
+    // arguments) do.
+    _context: PhantomData<&'static Context>,
 }
 
 impl Type for Function {
@@ -35,6 +41,7 @@ impl Function {
                     0,
                 )
             },
+            _context: PhantomData,
         }
     }
 

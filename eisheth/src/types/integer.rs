@@ -1,16 +1,9 @@
 use std::marker::PhantomData;
 
-use llvm_sys::{
-    core::{LLVMConstInt, LLVMInt64TypeInContext},
-    prelude::{LLVMContextRef, LLVMTypeRef},
-};
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 
 use super::{Type, value::Value};
 use crate::{Context, LLVM_CONTEXT};
-
-thread_local! {
-    static U64_ID:IntegerType = IntegerType::new(LLVMInt64TypeInContext);
-}
 
 #[derive(Clone, Copy)]
 struct IntegerType {
@@ -36,19 +29,38 @@ impl IntegerType {
     }
 }
 
-pub struct U64;
+macro_rules! declare_integer_type {
+    ($bitcount:expr) => {
+        paste::paste!{
+            thread_local! {
+                static [<U $bitcount _ID>]:IntegerType
+                    = IntegerType::new(llvm_sys::core::[<LLVMInt $bitcount TypeInContext>]);
+            }
 
-impl Type for U64 {
-    fn as_llvm_ref(&self) -> LLVMTypeRef {
-        U64_ID.with(super::Type::as_llvm_ref)
-    }
+            pub struct [<U $bitcount>];
+
+            impl Type for [<U $bitcount>] {
+                fn as_llvm_ref(&self) -> LLVMTypeRef {
+                    [<U $bitcount _ID>].with(super::Type::as_llvm_ref)
+                }
+            }
+
+            impl [<U $bitcount>] {
+                #[must_use]
+                pub fn const_value(value: [<u $bitcount>]) -> Value {
+                    [<U $bitcount _ID>]
+                        // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
+                        // will be valid
+                        .with(|r#type| unsafe {
+                            Value::new(
+                                llvm_sys::core::LLVMConstInt(r#type.as_llvm_ref(), u64::from(value), 0)
+                            )
+                        })
+                }
+            }
+        }
+    };
 }
 
-impl U64 {
-    #[must_use]
-    pub fn const_value(value: u64) -> Value {
-        // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
-        // will be valid
-        U64_ID.with(|r#type| unsafe { Value::new(LLVMConstInt(r#type.as_llvm_ref(), value, 0)) })
-    }
-}
+declare_integer_type!(64);
+declare_integer_type!(32);
