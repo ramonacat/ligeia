@@ -5,7 +5,7 @@ use eisheth::{
     },
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     package::builder::PackageBuilder,
-    types::{self, value::ConstValue},
+    types::{self, Type, value::ConstValue},
 };
 
 pub struct Definition {
@@ -36,9 +36,9 @@ impl ImportedDefinition<'_> {
 
     pub(crate) fn const_null(&self) -> ConstValue {
         self.r#type.const_value(&[
-            types::Pointer::const_null(),
-            types::U32::const_value(0),
-            types::U32::const_value(0),
+            types::Pointer.const_uninitialized().unwrap(),
+            types::U32.const_uninitialized().unwrap(),
+            types::U32.const_uninitialized().unwrap(),
         ])
     }
 
