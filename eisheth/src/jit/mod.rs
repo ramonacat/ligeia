@@ -18,7 +18,7 @@ use llvm_sys::{
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
 };
 
-use super::{global_symbol::GlobalSymbols, module::FunctionDeclaration, package::Package};
+use super::{global_symbol::GlobalSymbols, module::DeclaredFunctionDescriptor, package::Package};
 
 #[derive(Clone, Copy)]
 struct JITToken;
@@ -93,7 +93,7 @@ impl Jit {
     #[must_use]
     pub unsafe fn get_function<TFunction>(
         &self,
-        id: FunctionDeclaration,
+        id: DeclaredFunctionDescriptor,
     ) -> JitFunction<TFunction> {
         let name = CString::from_str(&self.symbols.resolve(id.name())).unwrap();
 

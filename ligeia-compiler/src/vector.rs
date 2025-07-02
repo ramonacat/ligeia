@@ -3,14 +3,14 @@ use eisheth::{
         declaration::{FunctionDeclarationDescriptor, Visibility},
         instruction_builder::InstructionBuilder,
     },
-    module::{FunctionDeclaration, builder::ModuleBuilder},
+    module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     package::builder::PackageBuilder,
     types::{self, value::ConstValue},
 };
 
 pub struct Definition {
     r#type: types::Struct,
-    initializer: FunctionDeclaration,
+    initializer: DeclaredFunctionDescriptor,
 }
 
 impl Definition {
@@ -26,7 +26,7 @@ impl Definition {
 
 pub struct ImportedDefinition<'definition> {
     r#type: &'definition types::Struct,
-    initializer: FunctionDeclaration,
+    initializer: DeclaredFunctionDescriptor,
 }
 
 impl ImportedDefinition<'_> {

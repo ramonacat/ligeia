@@ -12,7 +12,7 @@ use llvm_sys::{
 use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::{
     LLVM_CONTEXT,
-    module::{FunctionDeclaration, builder::ModuleBuilder},
+    module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     types::{
         Type,
         value::{ConstOrDynamicValue, DynamicValue, Value},
@@ -67,7 +67,7 @@ impl<'module> InstructionBuilder<'module> {
     /// Can panic if the name cannot be converted to a `CString`
     pub fn direct_call(
         &self,
-        function: FunctionDeclaration,
+        function: DeclaredFunctionDescriptor,
         arguments: &[&dyn Value],
         name: &str,
     ) -> DynamicValue {

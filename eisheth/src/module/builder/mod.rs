@@ -15,7 +15,7 @@ use llvm_sys::{
 };
 use thiserror::Error;
 
-use super::{FunctionDeclaration, ModuleId, built::Module};
+use super::{DeclaredFunctionDescriptor, ModuleId, built::Module};
 use crate::{
     LLVM_CONTEXT,
     function::{
@@ -56,17 +56,17 @@ impl Error for ModuleBuildError {}
 #[derive(Debug, Error)]
 pub enum FunctionImportError {
     #[error("Function {0:?} is not exported")]
-    NotExported(FunctionDeclaration),
+    NotExported(DeclaredFunctionDescriptor),
     #[error("Function {0:?} cannot be imported into the same module where it was defined")]
-    DefinedInThisModule(FunctionDeclaration),
+    DefinedInThisModule(DeclaredFunctionDescriptor),
 }
 
 pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
-    functions: HashMap<FunctionDeclaration, LLVMValueRef>,
-    global_initializers: Vec<FunctionDeclaration>,
+    functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
+    global_initializers: Vec<DeclaredFunctionDescriptor>,
 }
 
 impl ModuleBuilder {
@@ -100,8 +100,8 @@ impl ModuleBuilder {
         &mut self,
         declaration: &FunctionDeclarationDescriptor,
         implement: impl FnOnce(&FunctionBuilder),
-    ) -> FunctionDeclaration {
-        let id = FunctionDeclaration {
+    ) -> DeclaredFunctionDescriptor {
+        let id = DeclaredFunctionDescriptor {
             module_id: self.id,
             name: self.symbols.intern(declaration.name()),
             r#type: declaration.r#type(),
@@ -145,8 +145,8 @@ impl ModuleBuilder {
     /// not exporting it.
     pub fn import_function(
         &mut self,
-        id: FunctionDeclaration,
-    ) -> Result<FunctionDeclaration, FunctionImportError> {
+        id: DeclaredFunctionDescriptor,
+    ) -> Result<DeclaredFunctionDescriptor, FunctionImportError> {
         if id.module_id == self.id {
             return Err(FunctionImportError::DefinedInThisModule(id));
         }
@@ -163,7 +163,7 @@ impl ModuleBuilder {
             // pointers being valid
             unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
 
-        let id = FunctionDeclaration {
+        let id = DeclaredFunctionDescriptor {
             module_id: self.id,
             name: id.name,
             r#type: id.r#type,
@@ -227,7 +227,7 @@ impl ModuleBuilder {
         })
     }
 
-    pub(crate) fn get_function(&self, function: FunctionDeclaration) -> FunctionReference {
+    pub(crate) fn get_function(&self, function: DeclaredFunctionDescriptor) -> FunctionReference {
         let value = self.functions.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they
@@ -248,13 +248,9 @@ impl ModuleBuilder {
         unsafe { LLVMSetInitializer(global, value.as_llvm_ref()) };
 
         // SAFETY: We just created the global, and it will not ever be destroyed
-        // TODO: Should we return another type, so that the global can actually be destroyed when
-        // it's dropped or something? or will it just bring more confusion?
         unsafe { ConstValue::new(global) }
     }
 
-    // TODO some cleaner abstractions here are definitely required, we should verify if all these
-    // leaks are needed (some arguments may just need to live for the length of the call).
     fn build_global_initializers(&self) {
         if self.global_initializers.is_empty() {
             return;
@@ -269,10 +265,6 @@ impl ModuleBuilder {
                 &initializers_array_type.const_uninitialized().unwrap(),
             )
         });
-
-        // SAFETY: The module reference is kept valid as long as `self` is, the
-        // initializers_array_type was just created, the name is allocated on the spot
-        // TODO: Use define_global here, but first Array must be a real type
 
         // SAFETY: The global was just crated, it's valid
         unsafe { LLVMSetLinkage(global.as_llvm_ref(), LLVMLinkage::LLVMAppendingLinkage) };

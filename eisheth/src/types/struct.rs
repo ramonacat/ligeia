@@ -55,7 +55,6 @@ impl Struct {
 
     /// # Panics
     /// This will panic if the number of field values does not match the number of defined fields.
-    /// TODO Should we return an error in that case instead?
     #[must_use]
     pub fn const_value(&self, fields: &[ConstValue]) -> ConstValue {
         assert!(self.fields_count() == fields.len());
