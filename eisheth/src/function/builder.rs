@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     module::{AnyModule, builder::ModuleBuilder},
-    types::{self, Type, function::Function, value::Value},
+    types::{self, Type, function::Function, value::DynamicValue},
 };
 
 pub(crate) struct FunctionReference<'module> {
@@ -92,7 +92,7 @@ impl<'module> FunctionBuilder<'module> {
     /// TODO Is this even a sensible check? Can this ever happen?
     /// If the received argument's type does not match the declared type.
     #[must_use]
-    pub fn get_argument(&self, index: u32) -> Option<Value> {
+    pub fn get_argument(&self, index: u32) -> Option<DynamicValue> {
         let argument_type = self.r#type.get_argument(index as usize)?;
 
         // SAFETY: We've ensured that the `index` is not out-of-bounds while getting the argument
@@ -104,7 +104,7 @@ impl<'module> FunctionBuilder<'module> {
 
         // SAFETY: We know that the type of the argument matches the type of the Value, so this is
         // correct and safe
-        Some(unsafe { Value::new(argument) })
+        Some(unsafe { DynamicValue::new(argument) })
     }
 
     pub(crate) const fn build(self) -> LLVMValueRef {

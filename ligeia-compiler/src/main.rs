@@ -39,7 +39,7 @@ fn main() {
     main_module.define_global_initializer("init_test_vector", |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            imported_defintion.initialize(&i, test_vector);
+            imported_defintion.initialize(&i, &test_vector);
 
             i.r#return(None)
         });
@@ -77,7 +77,7 @@ fn main() {
                 let base = types::U64::const_value(32);
                 let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
                 let value_from_other =
-                    i.direct_call(other, &[types::U64::const_value(2)], "calling_other");
+                    i.direct_call(other, &[&types::U64::const_value(2)], "calling_other");
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
                 let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");

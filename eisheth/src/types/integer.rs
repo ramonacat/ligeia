@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 
-use super::{Type, value::Value};
+use super::{Type, value::ConstValue};
 use crate::{Context, LLVM_CONTEXT};
 
 #[derive(Clone, Copy)]
@@ -47,12 +47,12 @@ macro_rules! declare_integer_type {
 
             impl [<U $bitcount>] {
                 #[must_use]
-                pub fn const_value(value: [<u $bitcount>]) -> Value {
+                pub fn const_value(value: [<u $bitcount>]) -> ConstValue {
                     [<U $bitcount _ID>]
                         // SAFETY: the type held by `U64_ID` lives for 'static, so the reference for LLVMConstInt
                         // will be valid
                         .with(|r#type| unsafe {
-                            Value::new(
+                            ConstValue::new(
                                 llvm_sys::core::LLVMConstInt(r#type.as_llvm_ref(), u64::from(value), 0)
                             )
                         })

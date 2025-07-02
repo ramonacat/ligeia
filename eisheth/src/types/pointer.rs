@@ -5,8 +5,8 @@ use llvm_sys::{
     prelude::LLVMTypeRef,
 };
 
-use super::{Type, value::Value};
-use crate::{Context, LLVM_CONTEXT};
+use super::Type;
+use crate::{Context, LLVM_CONTEXT, types::value::ConstValue};
 
 struct PointerType {
     reference: LLVMTypeRef,
@@ -43,12 +43,12 @@ pub struct Pointer;
 
 impl Pointer {
     #[must_use]
-    pub fn const_null() -> Value {
+    pub fn const_null() -> ConstValue {
         // SAFETY: We know the pointer type pointer is valid
         let value = POINTER.with(|pointer| unsafe { LLVMConstPointerNull(pointer.as_llvm_ref()) });
 
         // SAFETY: We just crated the value, it is valid
-        unsafe { Value::new(value) }
+        unsafe { ConstValue::new(value) }
     }
 }
 

@@ -23,7 +23,10 @@ use crate::{
     },
     global_symbol::GlobalSymbols,
     package::context::PackageContext,
-    types::{self, Type, value::Value},
+    types::{
+        self, Type,
+        value::{ConstValue, Value as _},
+    },
 };
 
 thread_local! {
@@ -233,7 +236,7 @@ impl ModuleBuilder {
 
     /// # Panics
     /// This function can panic if the `name` cannot be converted into a `CString`
-    pub fn define_global(&self, name: &str, r#type: &dyn Type, value: &Value) -> Value {
+    pub fn define_global(&self, name: &str, r#type: &dyn Type, value: &ConstValue) -> ConstValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: the module reference, type and name are all valid pointers for the duration of
         // the call
@@ -245,7 +248,7 @@ impl ModuleBuilder {
         // SAFETY: We just created the global, and it will not ever be destroyed
         // TODO: Should we return another type, so that the global can actually be destroyed when
         // it's dropped or something? or will it just bring more confusion?
-        unsafe { Value::new(global) }
+        unsafe { ConstValue::new(global) }
     }
 
     // TODO some cleaner abstractions here are definitely required, we should verify if all these

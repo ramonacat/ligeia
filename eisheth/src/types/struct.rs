@@ -8,8 +8,12 @@ use llvm_sys::{
     prelude::LLVMTypeRef,
 };
 
-use super::{Type, value::Value};
-use crate::{Context, LLVM_CONTEXT, function::instruction_builder::InstructionBuilder};
+use super::{Type, value::DynamicValue};
+use crate::{
+    Context, LLVM_CONTEXT,
+    function::instruction_builder::InstructionBuilder,
+    types::value::{ConstValue, Value},
+};
 
 // TODO: A proc derive macro that generates cute structs that match on both the Rust side, and the
 // FFI side
@@ -50,7 +54,7 @@ impl Struct {
     /// This will panic if the number of field values does not match the number of defined fields.
     /// TODO Should we return an error in that case instead?
     #[must_use]
-    pub fn const_value(&self, fields: &[Value]) -> Value {
+    pub fn const_value(&self, fields: &[ConstValue]) -> ConstValue {
         assert!(self.fields_count() == fields.len());
 
         let mut values: Vec<_> = fields.iter().map(Value::as_llvm_ref).collect();
@@ -66,7 +70,7 @@ impl Struct {
         };
 
         // SAFETY: We just created the value so it's a valid one
-        unsafe { Value::new(value) }
+        unsafe { ConstValue::new(value) }
     }
 
     /// # Panics
@@ -76,10 +80,10 @@ impl Struct {
     pub fn get_field_pointer(
         &self,
         i: &InstructionBuilder,
-        pointer: &Value,
+        pointer: &DynamicValue,
         index: usize,
         name: &str,
-    ) -> Value {
+    ) -> DynamicValue {
         assert!(index < self.fields_count());
 
         let name = CString::new(name).unwrap();
@@ -97,7 +101,7 @@ impl Struct {
         };
 
         // SAFETY: We just created the value, so it is a valid pointer
-        unsafe { Value::new(value) }
+        unsafe { DynamicValue::new(value) }
     }
 
     fn fields_count(&self) -> usize {

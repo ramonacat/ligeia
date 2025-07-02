@@ -5,7 +5,7 @@ use eisheth::{
     },
     module::{FunctionDeclaration, builder::ModuleBuilder},
     package::builder::PackageBuilder,
-    types,
+    types::{self, value::ConstValue},
 };
 
 pub struct Definition {
@@ -34,7 +34,7 @@ impl ImportedDefinition<'_> {
         self.r#type
     }
 
-    pub(crate) fn const_null(&self) -> types::value::Value {
+    pub(crate) fn const_null(&self) -> ConstValue {
         self.r#type.const_value(&[
             types::Pointer::const_null(),
             types::U32::const_value(0),
@@ -42,12 +42,11 @@ impl ImportedDefinition<'_> {
         ])
     }
 
-    pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: types::value::Value) {
+    pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn types::value::Value) {
         i.direct_call(self.initializer, &[pointer], "");
     }
 }
 
-// TODO should we allow defining the module with neccessairly assigning it to a package?
 pub fn define(package_builder: &mut PackageBuilder) -> Definition {
     let module = package_builder.add_module("vector").unwrap();
 

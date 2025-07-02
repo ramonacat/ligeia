@@ -13,7 +13,10 @@ use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::{
     LLVM_CONTEXT,
     module::{FunctionDeclaration, builder::ModuleBuilder},
-    types::{Type, value::Value},
+    types::{
+        Type,
+        value::{ConstOrDynamicValue, DynamicValue, Value},
+    },
 };
 
 #[non_exhaustive]
@@ -43,7 +46,7 @@ impl<'module> InstructionBuilder<'module> {
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
     #[must_use]
-    pub fn add(&self, left: &Value, right: &Value, name: &str) -> Value {
+    pub fn add(&self, left: &dyn Value, right: &dyn Value, name: &str) -> ConstOrDynamicValue {
         let name = CString::from_str(name).unwrap();
 
         // SAFETY: the builder is valid and positioned, left and right exist for duration of the
@@ -57,7 +60,7 @@ impl<'module> InstructionBuilder<'module> {
             )
         };
         // SAFETY: We know the types of the arguments, so the return type must match them
-        unsafe { Value::new(value) }
+        unsafe { ConstOrDynamicValue::new(value) }
     }
 
     /// # Panics
@@ -65,12 +68,12 @@ impl<'module> InstructionBuilder<'module> {
     pub fn direct_call(
         &self,
         function: FunctionDeclaration,
-        arguments: &[Value],
+        arguments: &[&dyn Value],
         name: &str,
-    ) -> Value {
+    ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         let function = self.module().get_function(function);
-        let mut arguments: Vec<_> = arguments.iter().map(Value::as_llvm_ref).collect();
+        let mut arguments: Vec<_> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
 
         // SAFETY: we ensured all the references are valid
         let result = unsafe {
@@ -85,23 +88,23 @@ impl<'module> InstructionBuilder<'module> {
         };
 
         // SAFETY: LLVMBuildCall2 will return a value that is valid
-        unsafe { Value::new(result) }
+        unsafe { DynamicValue::new(result) }
     }
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc(&self, r#type: &dyn Type, name: &str) -> Value {
+    pub fn malloc(&self, r#type: &dyn Type, name: &str) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: All the pointers come from wrappers ensuring their validity
         let value = unsafe { LLVMBuildMalloc(self.builder, r#type.as_llvm_ref(), name.as_ptr()) };
 
         // SAFETY: We just crated the value, it must be valid
-        unsafe { Value::new(value) }
+        unsafe { DynamicValue::new(value) }
     }
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc_array(&self, r#type: &dyn Type, length: &Value, name: &str) -> Value {
+    pub fn malloc_array(&self, r#type: &dyn Type, length: &dyn Value, name: &str) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: All pointers come from wrappers ensuring their validity
         let value = unsafe {
@@ -114,10 +117,10 @@ impl<'module> InstructionBuilder<'module> {
         };
 
         // SAFETY: We just crated the value, the pointer is valid
-        unsafe { Value::new(value) }
+        unsafe { DynamicValue::new(value) }
     }
 
-    pub fn store(&self, target_pointer: &Value, value: &Value) {
+    pub fn store(&self, target_pointer: &dyn Value, value: &dyn Value) {
         // SAFETY: All the pointers come from safe wrappers that ensure they're valid
         unsafe {
             LLVMBuildStore(
@@ -129,7 +132,7 @@ impl<'module> InstructionBuilder<'module> {
     }
 
     #[must_use]
-    pub fn r#return(&self, value: Option<&Value>) -> TerminatorToken {
+    pub fn r#return(&self, value: Option<&dyn Value>) -> TerminatorToken {
         if let Some(value) = value {
             // SAFETY: we've a valid, positioned builder and the value must exist at least for the
             // duration of the call, so we're good
