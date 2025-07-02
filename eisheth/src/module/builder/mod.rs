@@ -1,3 +1,5 @@
+mod global_initializers;
+
 use std::{
     collections::HashMap, error::Error, ffi::CString, fmt::Display, rc::Rc, str::FromStr as _,
 };
@@ -6,9 +8,9 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMArrayType2, LLVMConstArray2, LLVMConstStructInContext,
+        LLVMAddFunction, LLVMAddGlobal, LLVMConstArray2, LLVMConstStructInContext,
         LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext, LLVMSetInitializer,
-        LLVMSetLinkage, LLVMStructType,
+        LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
@@ -22,6 +24,7 @@ use crate::{
         declaration::{FunctionDeclarationDescriptor, Visibility},
     },
     global_symbol::GlobalSymbols,
+    module::builder::global_initializers::GLOBAL_INITIALIZERS_ENTRY_TYPE,
     package::context::PackageContext,
     types::{
         self, Type,
@@ -258,28 +261,12 @@ impl ModuleBuilder {
             return;
         }
 
-        // TODO this should be an honest to god global static, that depends on context's lifetime
-        let initializer_element_types = Box::leak(Box::new(vec![
-            types::U32.as_llvm_ref(),
-            types::Pointer.as_llvm_ref(),
-            types::Pointer.as_llvm_ref(),
-        ]));
-
-        // SAFETY: The element types are leaked, and were just correctly created
-        let initializers_type = unsafe {
-            LLVMStructType(
-                initializer_element_types.as_mut_ptr(),
-                u32::try_from(initializer_element_types.len()).unwrap(),
-                0,
-            )
-        };
-
-        let initializers_array_type =
-            // SAFETY: The initializers_type was just crated, so it's valid
-            unsafe { LLVMArrayType2(initializers_type, self.global_initializers.len() as u64) };
+        let initializers_array_type = GLOBAL_INITIALIZERS_ENTRY_TYPE
+            .with(|r#type| r#type.array_ref(self.global_initializers.len()));
 
         // SAFETY: The module reference is kept valid as long as `self` is, the
         // initializers_array_type was just created, the name is allocated on the spot
+        // TODO: Use define_global here, but first Array must be a real type
         let global = unsafe {
             LLVMAddGlobal(
                 self.reference,
@@ -323,13 +310,13 @@ impl ModuleBuilder {
 
         // SAFETY: The global_initializers vec is leaked and never dies, the initializers_type is
         // initialized
-        let initializers = unsafe {
+        let initializers = GLOBAL_INITIALIZERS_ENTRY_TYPE.with(|initializers_type| unsafe {
             LLVMConstArray2(
-                initializers_type,
+                initializers_type.as_llvm_ref(),
                 global_initializers.as_mut_ptr(),
                 global_initializers.len() as u64,
             )
-        };
+        });
         // SAFETY: The initializers never get destroyed, as well as the global and both were just
         // created
         unsafe { LLVMSetInitializer(global, initializers) };
