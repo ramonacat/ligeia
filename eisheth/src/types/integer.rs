@@ -5,8 +5,8 @@ use llvm_sys::{
     prelude::{LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 
-use super::{Type, value::ConstValue};
-use crate::{Context, LLVM_CONTEXT};
+use super::Type;
+use crate::{Context, LLVM_CONTEXT, value::ConstValue};
 
 struct IntegerType {
     reference: LLVMTypeRef,

@@ -4,6 +4,7 @@ pub mod jit;
 pub mod module;
 pub mod package;
 pub mod types;
+pub mod value;
 
 use llvm_sys::{
     core::{LLVMContextCreate, LLVMContextDispose},

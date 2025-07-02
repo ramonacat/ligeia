@@ -5,10 +5,8 @@ use llvm_sys::{
 
 use crate::{
     LLVM_CONTEXT,
-    types::{
-        self, Type,
-        value::{ConstValue, Value},
-    },
+    types::{self, Type},
+    value::{ConstValue, Value as _},
 };
 
 thread_local! {

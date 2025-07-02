@@ -3,7 +3,6 @@ pub mod function;
 pub mod integer;
 pub mod pointer;
 pub mod r#struct;
-pub mod value;
 pub mod void;
 
 pub use array::Array;
@@ -14,7 +13,7 @@ pub use pointer::Pointer;
 pub use r#struct::Struct;
 pub use void::Void;
 
-use crate::types::value::ConstValue;
+use crate::value::ConstValue;
 
 pub trait Type {
     fn as_llvm_ref(&self) -> LLVMTypeRef;

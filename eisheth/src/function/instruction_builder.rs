@@ -13,10 +13,8 @@ use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::{
     LLVM_CONTEXT,
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
-    types::{
-        Type,
-        value::{ConstOrDynamicValue, DynamicValue, Value},
-    },
+    types::Type,
+    value::{ConstOrDynamicValue, DynamicValue, Value},
 };
 
 #[non_exhaustive]

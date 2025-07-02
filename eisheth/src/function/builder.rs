@@ -12,21 +12,22 @@ use super::{
 };
 use crate::{
     module::{AnyModule, builder::ModuleBuilder},
-    types::{self, Type, function::Function, value::DynamicValue},
+    types::{self, Type},
+    value::DynamicValue,
 };
 
 pub(crate) struct FunctionReference<'module> {
     // TODO should this be PhantomData instead? we only care about the lifetime ATM
     _module: &'module dyn AnyModule,
     reference: LLVMValueRef,
-    r#type: Function,
+    r#type: types::Function,
 }
 
 impl<'module> FunctionReference<'module> {
     pub(crate) unsafe fn new(
         module: &'module dyn AnyModule,
         reference: LLVMValueRef,
-        r#type: Function,
+        r#type: types::Function,
     ) -> Self {
         Self {
             _module: module,
@@ -35,7 +36,7 @@ impl<'module> FunctionReference<'module> {
         }
     }
 
-    pub(crate) const fn r#type(&self) -> Function {
+    pub(crate) const fn r#type(&self) -> types::Function {
         self.r#type
     }
 

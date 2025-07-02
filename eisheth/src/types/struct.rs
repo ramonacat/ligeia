@@ -8,11 +8,12 @@ use llvm_sys::{
     prelude::LLVMTypeRef,
 };
 
-use super::{Type, value::DynamicValue};
+use super::Type;
 use crate::{
     Context, LLVM_CONTEXT,
     function::instruction_builder::InstructionBuilder,
-    types::value::{ConstValue, Value},
+    types::ConstValue,
+    value::{DynamicValue, Value},
 };
 
 // TODO: A proc derive macro that generates cute structs that match on both the Rust side, and the

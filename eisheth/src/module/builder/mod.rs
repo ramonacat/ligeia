@@ -25,10 +25,8 @@ use crate::{
     global_symbol::GlobalSymbols,
     module::builder::global_initializers::GLOBAL_INITIALIZERS_ENTRY_TYPE,
     package::context::PackageContext,
-    types::{
-        self, Type,
-        value::{ConstValue, Value as _},
-    },
+    types::{self, Type},
+    value::{ConstValue, Value as _},
 };
 
 thread_local! {

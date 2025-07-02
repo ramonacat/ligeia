@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::{Context, LLVM_CONTEXT, types::value::ConstValue};
+use crate::{Context, LLVM_CONTEXT, value::ConstValue};
 
 struct PointerType {
     reference: LLVMTypeRef,

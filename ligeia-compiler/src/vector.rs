@@ -5,7 +5,8 @@ use eisheth::{
     },
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     package::builder::PackageBuilder,
-    types::{self, Type, value::ConstValue},
+    types::{self, Type},
+    value::{ConstValue, Value},
 };
 
 pub struct Definition {
@@ -42,7 +43,7 @@ impl ImportedDefinition<'_> {
         ])
     }
 
-    pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn types::value::Value) {
+    pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn Value) {
         i.direct_call(self.initializer, &[pointer], "");
     }
 }

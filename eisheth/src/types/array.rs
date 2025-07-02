@@ -3,9 +3,9 @@ use llvm_sys::{
     prelude::LLVMTypeRef,
 };
 
-use crate::types::{
-    Type,
-    value::{ConstValue, Value},
+use crate::{
+    types::Type,
+    value::{ConstValue, Value as _},
 };
 
 pub struct Array<'a> {
