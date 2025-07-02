@@ -50,7 +50,14 @@ impl ImportedDefinition<'_> {
 pub fn define(package_builder: &mut PackageBuilder) -> Definition {
     let module = package_builder.add_module("vector").unwrap();
 
-    let r#type = types::Struct::new("vector", &[&types::Pointer, &types::U32, &types::U32]);
+    let r#type = types::Struct::new(
+        "vector",
+        vec![
+            Box::new(types::Pointer),
+            Box::new(types::U32),
+            Box::new(types::U32),
+        ],
+    );
 
     let initializer = module.define_function(
         &FunctionDeclarationDescriptor::new(

@@ -19,13 +19,15 @@ use crate::{
 // FFI side
 pub struct Struct {
     reference: LLVMTypeRef,
+    fields: Vec<Box<dyn Type>>,
     _context: PhantomData<&'static Context>,
 }
 
 impl Struct {
     /// # Panics
     /// This function will panic if the name can't be converted into a `CString`
-    pub fn new(name: &str, fields: &[&dyn Type]) -> Self {
+    #[must_use]
+    pub fn new(name: &str, fields: Vec<Box<dyn Type>>) -> Self {
         let name = CString::from_str(name).unwrap();
         let reference = LLVM_CONTEXT
             // SAFETY: The context is &'static so must always be valid, the name is a valid pointer
@@ -46,6 +48,7 @@ impl Struct {
 
         Self {
             reference,
+            fields,
             _context: PhantomData,
         }
     }
@@ -114,5 +117,14 @@ impl Struct {
 impl Type for Struct {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
+    }
+
+    fn const_uninitialized(&self) -> ConstValue {
+        let fields: Vec<_> = self
+            .fields
+            .iter()
+            .map(|f| f.const_uninitialized())
+            .collect();
+        self.const_value(&fields)
     }
 }

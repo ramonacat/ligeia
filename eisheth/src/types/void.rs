@@ -14,6 +14,11 @@ impl Type for VoidType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
+
+    // TODO this should probably return an Option<> so we can None in this case
+    fn const_uninitialized(&self) -> super::value::ConstValue {
+        todo!()
+    }
 }
 
 impl VoidType {
@@ -37,5 +42,10 @@ pub struct Void;
 impl Type for Void {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         VOID_TYPE.with(Type::as_llvm_ref)
+    }
+
+    // TODO return None?
+    fn const_uninitialized(&self) -> super::value::ConstValue {
+        todo!()
     }
 }

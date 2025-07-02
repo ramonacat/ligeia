@@ -8,9 +8,8 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMConstArray2, LLVMConstStructInContext,
-        LLVMDisposeModule, LLVMDumpModule, LLVMModuleCreateWithNameInContext, LLVMSetInitializer,
-        LLVMSetLinkage,
+        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMDumpModule,
+        LLVMModuleCreateWithNameInContext, LLVMSetInitializer, LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
@@ -261,65 +260,22 @@ impl ModuleBuilder {
             return;
         }
 
-        let initializers_array_type = GLOBAL_INITIALIZERS_ENTRY_TYPE
-            .with(|r#type| r#type.array_ref(self.global_initializers.len()));
+        let global = GLOBAL_INITIALIZERS_ENTRY_TYPE.with(|r#type| {
+            let initializers_array_type = types::Array::new(r#type, self.global_initializers.len());
+
+            self.define_global(
+                "llvm.global_ctors",
+                &initializers_array_type,
+                &initializers_array_type.const_uninitialized(),
+            )
+        });
 
         // SAFETY: The module reference is kept valid as long as `self` is, the
         // initializers_array_type was just created, the name is allocated on the spot
         // TODO: Use define_global here, but first Array must be a real type
-        let global = unsafe {
-            LLVMAddGlobal(
-                self.reference,
-                initializers_array_type,
-                CString::from_str("llvm.global_ctors").unwrap().as_ptr(),
-            )
-        };
 
         // SAFETY: The global was just crated, it's valid
-        unsafe { LLVMSetLinkage(global, LLVMLinkage::LLVMAppendingLinkage) };
-
-        let global_initializers: Vec<_> = self
-            .global_initializers
-            .iter()
-            .map(|i| {
-                LLVM_CONTEXT.with(|context| {
-                    // TODO can we keep this as a field or something instead?
-                    let values = Box::leak(Box::new(vec![
-                        types::U32::const_value(0).as_llvm_ref(), // TODO this is priority, make it configurable
-                        self.get_function(*i).value(),
-                        types::Pointer::const_null().as_llvm_ref(), // TODO this is pointer to the intialized
-                                                                    // data, make it configurable
-                    ]));
-
-                    // SAFETY: The context is always valid, the values were created above and are
-                    // leaked and never destroyed
-                    unsafe {
-                        LLVMConstStructInContext(
-                            context.as_llvm_ref(),
-                            values.as_mut_ptr(),
-                            u32::try_from(values.len()).unwrap(),
-                            0,
-                        )
-                    }
-                })
-            })
-            .collect();
-
-        // TODO keep as a field instead of leaking
-        let global_initializers = Box::leak(Box::new(global_initializers));
-
-        // SAFETY: The global_initializers vec is leaked and never dies, the initializers_type is
-        // initialized
-        let initializers = GLOBAL_INITIALIZERS_ENTRY_TYPE.with(|initializers_type| unsafe {
-            LLVMConstArray2(
-                initializers_type.as_llvm_ref(),
-                global_initializers.as_mut_ptr(),
-                global_initializers.len() as u64,
-            )
-        });
-        // SAFETY: The initializers never get destroyed, as well as the global and both were just
-        // created
-        unsafe { LLVMSetInitializer(global, initializers) };
+        unsafe { LLVMSetLinkage(global.as_llvm_ref(), LLVMLinkage::LLVMAppendingLinkage) };
     }
 }
 

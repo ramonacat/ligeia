@@ -20,6 +20,12 @@ impl Type for Function {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
+
+    fn const_uninitialized(&self) -> super::value::ConstValue {
+        // TODO should we make the trait return Option<> instead? I don't think uninitialized
+        // function value is a thing...
+        todo!()
+    }
 }
 
 impl Function {

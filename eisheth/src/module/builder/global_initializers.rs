@@ -1,9 +1,15 @@
 use llvm_sys::{
-    core::{LLVMArrayType2, LLVMStructType},
+    core::{LLVMConstStructInContext, LLVMStructType},
     prelude::LLVMTypeRef,
 };
 
-use crate::types::{self, Type};
+use crate::{
+    LLVM_CONTEXT,
+    types::{
+        self, Type,
+        value::{ConstValue, Value},
+    },
+};
 
 thread_local! {
     pub(super) static GLOBAL_INITIALIZERS_ENTRY_TYPE: InitializersEntryType = InitializersEntryType::new();
@@ -30,16 +36,32 @@ impl InitializersEntryType {
 
         Self(initializers_type)
     }
-
-    // TODO We probably should have types::Array, this is hacky
-    pub(super) fn array_ref(&self, len: usize) -> LLVMTypeRef {
-        // SAFETY: The initializers_type was just crated, so it's valid
-        unsafe { LLVMArrayType2(self.0, len as u64) }
-    }
 }
 
 impl Type for InitializersEntryType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.0
+    }
+
+    fn const_uninitialized(&self) -> types::value::ConstValue {
+        let mut values = vec![
+            types::U32.const_uninitialized().as_llvm_ref(),
+            types::Pointer.const_uninitialized().as_llvm_ref(),
+            types::Pointer.const_uninitialized().as_llvm_ref(),
+        ];
+
+        // SAFETY: we know the context is valid, and values are all matching the definition of the
+        // type
+        let result = LLVM_CONTEXT.with(|context| unsafe {
+            LLVMConstStructInContext(
+                context.as_llvm_ref(),
+                values.as_mut_ptr(),
+                u32::try_from(values.len()).unwrap(),
+                0,
+            )
+        });
+
+        // SAFETY: We just crated the result, it's a valid pointer to a value
+        unsafe { ConstValue::new(result) }
     }
 }

@@ -33,6 +33,11 @@ impl Type for PointerType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
+
+    fn const_uninitialized(&self) -> ConstValue {
+        // SAFETY: The reference to the type is valid, so it's all chill.
+        unsafe { ConstValue::new(LLVMConstPointerNull(self.reference)) }
+    }
 }
 
 thread_local! {
@@ -45,6 +50,7 @@ pub struct Pointer;
 
 impl Pointer {
     #[must_use]
+    // TODO should this still exist if const_uninitialized is a thing?
     pub fn const_null() -> ConstValue {
         // SAFETY: We know the pointer type pointer is valid
         let value = POINTER.with(|pointer| unsafe { LLVMConstPointerNull(pointer.as_llvm_ref()) });
@@ -57,5 +63,9 @@ impl Pointer {
 impl Type for Pointer {
     fn as_llvm_ref(&self) -> llvm_sys::prelude::LLVMTypeRef {
         POINTER.with(super::Type::as_llvm_ref)
+    }
+
+    fn const_uninitialized(&self) -> ConstValue {
+        POINTER.with(super::Type::const_uninitialized)
     }
 }
