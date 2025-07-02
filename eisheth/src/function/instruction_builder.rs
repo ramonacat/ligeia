@@ -78,7 +78,7 @@ impl<'module> InstructionBuilder<'module> {
             LLVMBuildCall2(
                 self.builder,
                 function.r#type().as_llvm_ref(),
-                function.value(),
+                function.as_llvm_ref(),
                 arguments.as_mut_ptr(),
                 u32::try_from(arguments.len()).unwrap(),
                 name.as_ptr(),

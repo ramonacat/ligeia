@@ -40,8 +40,7 @@ impl<'module> FunctionReference<'module> {
         self.r#type
     }
 
-    // TODO rename -> as_llvm_ref()?
-    pub(crate) const fn value(&self) -> LLVMValueRef {
+    pub(crate) const fn as_llvm_ref(&self) -> LLVMValueRef {
         self.reference
     }
 }
