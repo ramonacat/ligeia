@@ -89,8 +89,12 @@ fn main() {
 
     let package = match package_builder.build() {
         Ok(package) => package,
-        Err(error) => {
-            panic!("{error}");
+        Err(errors) => {
+            for error in errors {
+                eprintln!("{error}");
+            }
+
+            panic!("failed to build modlues");
         }
     };
     let jit = Jit::new(package);

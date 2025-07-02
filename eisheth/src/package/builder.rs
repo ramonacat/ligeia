@@ -60,14 +60,22 @@ impl PackageBuilder {
     /// This will error out and return the error for the first module that fails to build.
     /// # Panics
     /// If there are no modules in the package
-    /// TODO should we return all the errors as a Vec<>, instead of giving up after first failed
-    /// module?
-    pub fn build(self) -> Result<Package, ModuleBuildError> {
-        let mut built_modules = self
-            .modules
-            .into_values()
-            .map(ModuleBuilder::build)
-            .collect::<Result<Vec<_>, ModuleBuildError>>()?;
+    pub fn build(self) -> Result<Package, Vec<ModuleBuildError>> {
+        let module_build_results = self.modules.into_values().map(ModuleBuilder::build);
+
+        let mut module_build_errors = vec![];
+        let mut built_modules = vec![];
+
+        for module_build_result in module_build_results {
+            match module_build_result {
+                Ok(module) => built_modules.push(module),
+                Err(error) => module_build_errors.push(error),
+            }
+        }
+
+        if !module_build_errors.is_empty() {
+            return Err(module_build_errors);
+        }
 
         let final_module = built_modules
             .pop()
