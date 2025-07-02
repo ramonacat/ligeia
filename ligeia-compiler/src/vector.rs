@@ -64,15 +64,21 @@ pub fn define(package_builder: &mut PackageBuilder) -> Definition {
             let vector = f.get_argument(0).unwrap();
 
             entry.build(|i| {
-                let memory_pointer = r#type.get_field_pointer(&i, &vector, 0, "memory_pointer");
+                let memory_pointer = r#type
+                    .get_field_pointer(&i, &vector, 0, "memory_pointer")
+                    .unwrap();
                 let memory = i.malloc_array(&types::U64, &types::U64::const_value(1), "memory");
                 i.store(&memory_pointer, &memory);
 
-                let capacity_pointer = r#type.get_field_pointer(&i, &vector, 1, "capacity_pointer");
+                let capacity_pointer = r#type
+                    .get_field_pointer(&i, &vector, 1, "capacity_pointer")
+                    .unwrap();
                 let capacity = types::U32::const_value(1);
                 i.store(&capacity_pointer, &capacity);
 
-                let length_pointer = r#type.get_field_pointer(&i, &vector, 1, "length_pointer");
+                let length_pointer = r#type
+                    .get_field_pointer(&i, &vector, 1, "length_pointer")
+                    .unwrap();
                 let length = types::U32::const_value(2);
                 i.store(&length_pointer, &length);
 

@@ -38,7 +38,9 @@ impl Type for PointerType {
 thread_local! {
     static POINTER:PointerType = PointerType::new();
 }
-// TODO should pointers be generic over type?
+
+// TODO should pointers have optional type that can be verified in instruction builder, or do we
+// leave it for the generated LLVM IR check?
 pub struct Pointer;
 
 impl Pointer {

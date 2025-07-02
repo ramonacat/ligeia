@@ -75,7 +75,6 @@ impl Struct {
 
     /// # Panics
     /// If the field index is out of bounds
-    /// TODO Should we return an error instead of panicking?
     #[must_use]
     pub fn get_field_pointer(
         &self,
@@ -83,8 +82,10 @@ impl Struct {
         pointer: &DynamicValue,
         index: usize,
         name: &str,
-    ) -> DynamicValue {
-        assert!(index < self.fields_count());
+    ) -> Option<DynamicValue> {
+        if index >= self.fields_count() {
+            return None;
+        }
 
         let name = CString::new(name).unwrap();
 
@@ -101,7 +102,7 @@ impl Struct {
         };
 
         // SAFETY: We just created the value, so it is a valid pointer
-        unsafe { DynamicValue::new(value) }
+        Some(unsafe { DynamicValue::new(value) })
     }
 
     fn fields_count(&self) -> usize {
