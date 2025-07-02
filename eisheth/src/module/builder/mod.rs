@@ -266,7 +266,7 @@ impl ModuleBuilder {
             self.define_global(
                 "llvm.global_ctors",
                 &initializers_array_type,
-                &initializers_array_type.const_uninitialized(),
+                &initializers_array_type.const_uninitialized().unwrap(),
             )
         });
 

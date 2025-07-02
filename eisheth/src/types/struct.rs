@@ -119,12 +119,12 @@ impl Type for Struct {
         self.reference
     }
 
-    fn const_uninitialized(&self) -> ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         let fields: Vec<_> = self
             .fields
             .iter()
-            .map(|f| f.const_uninitialized())
+            .map(|f| f.const_uninitialized().unwrap())
             .collect();
-        self.const_value(&fields)
+        Some(self.const_value(&fields))
     }
 }

@@ -19,9 +19,9 @@ impl Type for IntegerType {
         self.reference
     }
 
-    fn const_uninitialized(&self) -> ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         // SAFETY: zero_factory must always return a valid pointer
-        unsafe { ConstValue::new((self.zero_factory)(self)) }
+        Some(unsafe { ConstValue::new((self.zero_factory)(self)) })
     }
 }
 
@@ -63,7 +63,7 @@ macro_rules! declare_integer_type {
                     [<U $bitcount _ID>].with(super::Type::as_llvm_ref)
                 }
 
-                fn const_uninitialized(&self) -> ConstValue {
+                fn const_uninitialized(&self) -> Option<ConstValue> {
                     [<U $bitcount _ID>].with(super::Type::const_uninitialized)
                 }
             }

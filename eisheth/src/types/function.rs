@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::Context;
+use crate::{Context, types::value::ConstValue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {
@@ -21,10 +21,8 @@ impl Type for Function {
         self.reference
     }
 
-    fn const_uninitialized(&self) -> super::value::ConstValue {
-        // TODO should we make the trait return Option<> instead? I don't think uninitialized
-        // function value is a thing...
-        todo!()
+    fn const_uninitialized(&self) -> Option<ConstValue> {
+        None
     }
 }
 

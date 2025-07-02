@@ -43,11 +43,11 @@ impl Type for InitializersEntryType {
         self.0
     }
 
-    fn const_uninitialized(&self) -> types::value::ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         let mut values = vec![
-            types::U32.const_uninitialized().as_llvm_ref(),
-            types::Pointer.const_uninitialized().as_llvm_ref(),
-            types::Pointer.const_uninitialized().as_llvm_ref(),
+            types::U32.const_uninitialized().unwrap().as_llvm_ref(),
+            types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
+            types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
         ];
 
         // SAFETY: we know the context is valid, and values are all matching the definition of the
@@ -62,6 +62,6 @@ impl Type for InitializersEntryType {
         });
 
         // SAFETY: We just crated the result, it's a valid pointer to a value
-        unsafe { ConstValue::new(result) }
+        Some(unsafe { ConstValue::new(result) })
     }
 }

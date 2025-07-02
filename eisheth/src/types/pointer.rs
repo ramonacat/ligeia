@@ -34,9 +34,9 @@ impl Type for PointerType {
         self.reference
     }
 
-    fn const_uninitialized(&self) -> ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         // SAFETY: The reference to the type is valid, so it's all chill.
-        unsafe { ConstValue::new(LLVMConstPointerNull(self.reference)) }
+        Some(unsafe { ConstValue::new(LLVMConstPointerNull(self.reference)) })
     }
 }
 
@@ -65,7 +65,7 @@ impl Type for Pointer {
         POINTER.with(super::Type::as_llvm_ref)
     }
 
-    fn const_uninitialized(&self) -> ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         POINTER.with(super::Type::const_uninitialized)
     }
 }

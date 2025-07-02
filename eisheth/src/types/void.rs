@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use llvm_sys::{core::LLVMVoidTypeInContext, prelude::LLVMTypeRef};
 
 use super::Type;
-use crate::{Context, LLVM_CONTEXT};
+use crate::{Context, LLVM_CONTEXT, types::value::ConstValue};
 
 pub struct VoidType {
     reference: LLVMTypeRef,
@@ -15,9 +15,8 @@ impl Type for VoidType {
         self.reference
     }
 
-    // TODO this should probably return an Option<> so we can None in this case
-    fn const_uninitialized(&self) -> super::value::ConstValue {
-        todo!()
+    fn const_uninitialized(&self) -> Option<ConstValue> {
+        None
     }
 }
 
@@ -44,8 +43,7 @@ impl Type for Void {
         VOID_TYPE.with(Type::as_llvm_ref)
     }
 
-    // TODO return None?
-    fn const_uninitialized(&self) -> super::value::ConstValue {
-        todo!()
+    fn const_uninitialized(&self) -> Option<ConstValue> {
+        None
     }
 }

@@ -29,10 +29,15 @@ impl Type for Array<'_> {
         self.reference
     }
 
-    fn const_uninitialized(&self) -> super::value::ConstValue {
+    fn const_uninitialized(&self) -> Option<ConstValue> {
         // SAFETY: we know the reference is valid
         let mut values: Vec<_> = (0..unsafe { LLVMGetArrayLength2(self.reference) })
-            .map(|_| self.r#element_type.const_uninitialized().as_llvm_ref())
+            .map(|_| {
+                self.r#element_type
+                    .const_uninitialized()
+                    .unwrap()
+                    .as_llvm_ref()
+            })
             .collect();
 
         // SAFETY: the values are LLVMValueRef and the length and type matches
@@ -45,6 +50,6 @@ impl Type for Array<'_> {
         };
 
         // SAFETY: We just crated the value, so it's definitely initialized and correct
-        unsafe { ConstValue::new(result) }
+        Some(unsafe { ConstValue::new(result) })
     }
 }

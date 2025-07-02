@@ -18,5 +18,5 @@ use crate::types::value::ConstValue;
 
 pub trait Type {
     fn as_llvm_ref(&self) -> LLVMTypeRef;
-    fn const_uninitialized(&self) -> ConstValue;
+    fn const_uninitialized(&self) -> Option<ConstValue>;
 }
