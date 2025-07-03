@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::{Context, value::ConstValue};
+use crate::{context::Context, value::ConstValue};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {

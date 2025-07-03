@@ -17,7 +17,7 @@ use thiserror::Error;
 
 use super::{DeclaredFunctionDescriptor, ModuleId, built::Module};
 use crate::{
-    LLVM_CONTEXT,
+    context::LLVM_CONTEXT,
     function::{
         builder::{FunctionBuilder, FunctionReference},
         declaration::{FunctionDeclarationDescriptor, Visibility},

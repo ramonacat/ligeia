@@ -6,7 +6,10 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::{Context, LLVM_CONTEXT, value::ConstValue};
+use crate::{
+    context::{Context, LLVM_CONTEXT},
+    value::ConstValue,
+};
 
 struct IntegerType {
     reference: LLVMTypeRef,

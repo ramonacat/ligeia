@@ -10,7 +10,7 @@ use llvm_sys::{
 
 use super::Type;
 use crate::{
-    Context, LLVM_CONTEXT,
+    context::{Context, LLVM_CONTEXT},
     function::instruction_builder::InstructionBuilder,
     types::ConstValue,
     value::{DynamicValue, Value},

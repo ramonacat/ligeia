@@ -11,7 +11,7 @@ use llvm_sys::{
 
 use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::{
-    LLVM_CONTEXT,
+    context::LLVM_CONTEXT,
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     types::Type,
     value::{ConstOrDynamicValue, DynamicValue, Value},

@@ -6,7 +6,10 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::{Context, LLVM_CONTEXT, value::ConstValue};
+use crate::{
+    context::{Context, LLVM_CONTEXT},
+    value::ConstValue,
+};
 
 struct PointerType {
     reference: LLVMTypeRef,
@@ -43,8 +46,6 @@ thread_local! {
     static POINTER:PointerType = PointerType::new();
 }
 
-// TODO Add an optional pointed-to type, so that we can verify it in cases where its known (LLVM's
-// IR checker doesn't know pointer target types so we can't leave it to it)
 pub struct Pointer;
 
 impl Type for Pointer {

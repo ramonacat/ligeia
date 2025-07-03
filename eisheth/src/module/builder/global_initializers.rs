@@ -4,7 +4,7 @@ use llvm_sys::{
 };
 
 use crate::{
-    LLVM_CONTEXT,
+    context::LLVM_CONTEXT,
     types::{self, Type},
     value::{ConstValue, Value as _},
 };
