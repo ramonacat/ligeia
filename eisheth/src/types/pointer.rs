@@ -16,7 +16,6 @@ struct PointerType {
 impl PointerType {
     fn new() -> Self {
         let reference = LLVM_CONTEXT.with(|context| {
-            // TODO Support more than a single address space
             // SAFETY: We know the context is valid, therefore the preconditions for this call are
             // satisfied
             unsafe { LLVMPointerTypeInContext(context.as_llvm_ref(), 0) }
@@ -44,8 +43,8 @@ thread_local! {
     static POINTER:PointerType = PointerType::new();
 }
 
-// TODO should pointers have optional type that can be verified in instruction builder, or do we
-// leave it for the generated LLVM IR check?
+// TODO Add an optional pointed-to type, so that we can verify it in cases where its known (LLVM's
+// IR checker doesn't know pointer target types so we can't leave it to it)
 pub struct Pointer;
 
 impl Type for Pointer {

@@ -5,7 +5,6 @@ pub static PACKAGE_ID_GENERATOR: PackageIdGenerator = PackageIdGenerator::new();
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PackageId(u64);
 
-// TODO we have a couple of generators like this, make it an abstraction?
 pub struct PackageIdGenerator(AtomicU64);
 
 impl PackageIdGenerator {

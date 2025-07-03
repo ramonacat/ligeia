@@ -41,7 +41,6 @@ impl PackageBuilder {
 
     /// # Errors
     /// Will return an error if the package already contains a module with the name given.
-    /// TODO should we allow defining the module with neccessairly assigning it to a package?
     pub fn add_module(
         &mut self,
         name: impl Into<String>,

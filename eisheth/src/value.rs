@@ -1,4 +1,3 @@
-// TODO Value should be its own module, it's not a type
 use llvm_sys::{core::LLVMIsConstant, prelude::LLVMValueRef};
 
 pub trait Value {

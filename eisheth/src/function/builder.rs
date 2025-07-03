@@ -2,7 +2,7 @@ use std::{ffi::CString, str::FromStr as _};
 
 use llvm_sys::{
     LLVMLinkage,
-    core::{LLVMAddFunction, LLVMGetParam, LLVMSetLinkage, LLVMTypeOf},
+    core::{LLVMAddFunction, LLVMGetParam, LLVMSetLinkage},
     prelude::LLVMValueRef,
 };
 
@@ -89,18 +89,16 @@ impl<'module> FunctionBuilder<'module> {
     }
 
     /// # Panics
-    /// TODO Is this even a sensible check? Can this ever happen?
-    /// If the received argument's type does not match the declared type.
+    /// Will panic if the argument index does not fit in a u32.
     #[must_use]
-    pub fn get_argument(&self, index: u32) -> Option<DynamicValue> {
-        let argument_type = self.r#type.get_argument(index as usize)?;
+    pub fn get_argument(&self, index: usize) -> Option<DynamicValue> {
+        if index >= self.r#type.arguments_count() {
+            return None;
+        }
 
         // SAFETY: We've ensured that the `index` is not out-of-bounds while getting the argument
         // type, and self.function is a valid reference to the function
-        let argument = unsafe { LLVMGetParam(self.function, index) };
-
-        // SAFETY: We've ensured LLVMGetParam got correct arguments, so `argument` must be valid
-        assert!(argument_type == unsafe { LLVMTypeOf(argument) });
+        let argument = unsafe { LLVMGetParam(self.function, u32::try_from(index).unwrap()) };
 
         // SAFETY: We know that the type of the argument matches the type of the Value, so this is
         // correct and safe

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use llvm_sys::{
-    core::{LLVMCountParamTypes, LLVMFunctionType, LLVMGetParamTypes},
+    core::{LLVMCountParamTypes, LLVMFunctionType},
     prelude::LLVMTypeRef,
 };
 
@@ -49,24 +49,8 @@ impl Function {
         }
     }
 
-    pub(crate) fn get_argument(&self, index: usize) -> Option<LLVMTypeRef> {
+    pub(crate) fn arguments_count(&self) -> usize {
         // SAFETY: We know that reference is valid till self is dropped
-        let param_types_count = unsafe { LLVMCountParamTypes(self.reference) } as usize;
-
-        if index >= param_types_count {
-            return None;
-        }
-
-        let mut param_types: Vec<LLVMTypeRef> = Vec::with_capacity(param_types_count);
-
-        // SAFETY: We know that param_types is alive at least for duration of the call, and
-        // reference won't be freed until self is dropped
-        unsafe { LLVMGetParamTypes(self.reference, param_types.as_mut_ptr()) };
-
-        // SAFETY: LLVMGetParamTypes has filled the buffer, so now the pointers are correct for the
-        // new len
-        unsafe { param_types.set_len(param_types_count) };
-
-        param_types.get(index).copied()
+        (unsafe { LLVMCountParamTypes(self.reference) }) as usize
     }
 }
