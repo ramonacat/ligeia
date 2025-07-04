@@ -54,7 +54,6 @@ impl Module {
     pub(crate) fn link(&self, mut module: Self) {
         let reference = module.reference;
         module.reference = std::ptr::null_mut();
-        // TODO add the diagnostic handler so we can get the actual error messages from the linker
         // SAFETY: if the Module object exists, the reference must be valid, and we're consuming
         // the linked-in Module, so nobody can use that reference anymore
         let is_failed = unsafe { LLVMLinkModules2(self.reference, reference) } != 0;

@@ -97,7 +97,7 @@ fn main() {
             panic!("failed to build modlues");
         }
     };
-    let jit = Jit::new(package);
+    let jit = Jit::new(package).unwrap();
 
     // SAFETY: The signature matches the signature of the declaration
     let callable: JitFunction<unsafe extern "C" fn(u64) -> u64> =

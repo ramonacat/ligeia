@@ -1,7 +1,9 @@
 pub mod function;
 
 use std::{
+    error::Error,
     ffi::{CStr, CString},
+    fmt::Display,
     mem::MaybeUninit,
     rc::Rc,
     str::FromStr,
@@ -10,6 +12,7 @@ use std::{
 
 use function::JitFunction;
 use llvm_sys::{
+    core::LLVMDisposeMessage,
     execution_engine::{
         LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine, LLVMExecutionEngineRef,
         LLVMGetFunctionAddress, LLVMLinkInMCJIT, LLVMRunStaticConstructors,
@@ -34,6 +37,17 @@ static JIT_SETUP: LazyLock<JITToken> = LazyLock::new(|| {
     JITToken
 });
 
+#[derive(Debug)]
+pub struct JitInitializationError(pub String);
+
+impl Display for JitInitializationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "JIT initialization error: {}", self.0)
+    }
+}
+
+impl Error for JitInitializationError {}
+
 pub struct Jit {
     _token: JITToken,
     execution_engine: LLVMExecutionEngineRef,
@@ -42,17 +56,17 @@ pub struct Jit {
 
 impl Jit {
     /// # Panics
-    /// Will panic if the execution engine cannot be crated.
-    /// TODO Return an error instead of panicing in that case.
-    #[must_use]
-    pub fn new(package: Package) -> Self {
+    /// Will panic if the execution engine cannot be created, and no message is provided.
+    /// # Errors
+    /// Will return an error if th execution engine cannot be created.
+    pub fn new(package: Package) -> Result<Self, JitInitializationError> {
         let token = *JIT_SETUP;
         let symbols = package.symbols();
         let module = package.into_module();
 
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();
-            let mut error = std::ptr::null_mut();
+            let mut error_raw = std::ptr::null_mut();
 
             // SAFETY: the `module` must be correctly initialized if it exists, engine and error
             // are initialized by the called function
@@ -60,14 +74,22 @@ impl Jit {
                 LLVMCreateExecutionEngineForModule(
                     engine.as_mut_ptr(),
                     module.into_llvm_ref(),
-                    &raw mut error,
+                    &raw mut error_raw,
                 )
             } != 0
             {
-                assert!(!error.is_null());
+                assert!(!error_raw.is_null());
                 // SAFETY: We've checked the `error` is not null, so it must be a valid CStr
                 // pointer
-                panic!("{:?}", unsafe { CStr::from_ptr(error) });
+                let error = JitInitializationError(
+                    (unsafe { CStr::from_ptr(error_raw) })
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                );
+                // SAFETY: We're done with the string, made our copy, safe to destroy
+                unsafe { LLVMDisposeMessage(error_raw) };
+                return Err(error);
             }
 
             // SAFETY: We have checked for errors above, so the pointer must point at an initialized
@@ -78,11 +100,11 @@ impl Jit {
         // SAFETY: We just initialized the engine, it's valid and ready to run static constructors
         unsafe { LLVMRunStaticConstructors(execution_engine) };
 
-        Self {
+        Ok(Self {
             _token: token,
             execution_engine,
             symbols,
-        }
+        })
     }
 
     /// # Panics
