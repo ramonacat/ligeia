@@ -42,7 +42,7 @@ impl Module {
     /// # Panics
     /// If the `FunctionDeclaration` is from another module.
     #[must_use]
-    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> Function {
+    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> Function<'_> {
         assert!(id.module_id == self.id);
 
         let function = self.functions.get(&id).unwrap();

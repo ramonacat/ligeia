@@ -21,10 +21,20 @@ dependencies = [
 name = "eisheth"
 version = "0.1.0"
 dependencies = [
+ "eisheth-proc-macros",
  "llvm-sys",
  "paste",
  "string-interner",
  "thiserror",
+]
+
+[[package]]
+name = "eisheth-proc-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

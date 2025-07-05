@@ -16,8 +16,6 @@ use crate::{
     value::{DynamicValue, Value},
 };
 
-// TODO: A proc derive macro that generates cute structs that match on both the Rust side, and the
-// FFI side
 pub struct Struct {
     reference: LLVMTypeRef,
     fields: Vec<Box<dyn Type>>,

@@ -225,7 +225,10 @@ impl ModuleBuilder {
         })
     }
 
-    pub(crate) fn get_function(&self, function: DeclaredFunctionDescriptor) -> FunctionReference {
+    pub(crate) fn get_function(
+        &self,
+        function: DeclaredFunctionDescriptor,
+    ) -> FunctionReference<'_> {
         let value = self.functions.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they

@@ -15,7 +15,6 @@ pub struct FunctionDeclarationDescriptor {
 impl FunctionDeclarationDescriptor {
     pub fn new(name: impl Into<String>, r#type: types::Function, visibility: Visibility) -> Self {
         Self {
-            // TODO Should we convert into CString on creation?
             name: name.into(),
             r#type,
             visibility,

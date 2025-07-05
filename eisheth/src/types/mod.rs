@@ -17,5 +17,9 @@ use crate::value::ConstValue;
 
 pub trait Type {
     fn as_llvm_ref(&self) -> LLVMTypeRef;
+    // TODO should this be moved to a separate trait? same as the one with from_value or yet
+    // another one?
     fn const_uninitialized(&self) -> Option<ConstValue>;
 }
+
+// TODO Add a subtrait that has `fn from_value(value: T) -> ConstValue`

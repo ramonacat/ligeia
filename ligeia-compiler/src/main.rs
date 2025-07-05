@@ -4,7 +4,7 @@ use eisheth::{
     function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
-    types,
+    types::{self, Type},
 };
 
 fn main() {
@@ -24,7 +24,7 @@ fn main() {
         },
     );
 
-    let vector_definition = vector::define(&mut package_builder);
+    let vector_definition = vector::define::<u32>(&mut package_builder);
 
     let main_module = package_builder.add_module("main").unwrap();
 
@@ -32,8 +32,8 @@ fn main() {
 
     let test_vector = main_module.define_global(
         "test vector",
-        imported_defintion.r#type(),
-        &imported_defintion.const_null(),
+        &imported_defintion,
+        &imported_defintion.const_uninitialized().unwrap(),
     );
 
     main_module.define_global_initializer("init_test_vector", |function| {
