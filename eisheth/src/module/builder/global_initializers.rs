@@ -19,8 +19,8 @@ impl InitializersEntryType {
     fn new() -> Self {
         let mut initializer_element_types = vec![
             u32::representation().as_llvm_ref(),
-            types::Pointer.as_llvm_ref(),
-            types::Pointer.as_llvm_ref(),
+            <*mut fn()>::representation().as_llvm_ref(),
+            <*mut u8>::representation().as_llvm_ref(),
         ];
 
         // SAFETY: The element types are valid for the duration of the call
@@ -44,7 +44,7 @@ impl InitializersEntryType {
             priority.as_llvm_ref(),
             initializer.as_llvm_ref(),
             initialized_value.map_or_else(
-                || types::Pointer::const_null().as_llvm_ref(),
+                || types::PointerType::const_null().as_llvm_ref(),
                 Value::as_llvm_ref,
             ),
         ];

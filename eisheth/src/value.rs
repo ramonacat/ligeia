@@ -6,6 +6,7 @@ pub trait Value {
     fn as_llvm_ref(&self) -> LLVMValueRef;
 }
 
+#[must_use]
 pub enum ConstOrDynamicValue {
     Const(ConstValue),
     Dynamic(DynamicValue),
@@ -33,6 +34,7 @@ impl Value for ConstOrDynamicValue {
     }
 }
 
+#[must_use]
 pub struct ConstValue {
     reference: LLVMValueRef,
 }
@@ -51,6 +53,7 @@ impl Value for ConstValue {
     }
 }
 
+#[must_use]
 pub struct DynamicValue {
     reference: LLVMValueRef,
 }

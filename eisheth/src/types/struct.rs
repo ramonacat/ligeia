@@ -52,7 +52,6 @@ impl Struct {
 
     /// # Panics
     /// This will panic if the number of field values does not match the number of defined fields.
-    #[must_use]
     pub fn const_value(&self, fields: &[ConstValue]) -> ConstValue {
         assert!(self.fields_count() == fields.len());
 

@@ -9,7 +9,7 @@ pub use array::Array;
 pub use function::Function;
 pub use integer::IntegerType;
 use llvm_sys::prelude::LLVMTypeRef;
-pub use pointer::Pointer;
+pub use pointer::PointerType;
 pub use r#struct::Struct;
 pub use void::Void;
 

@@ -43,7 +43,6 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    #[must_use]
     pub fn add(&self, left: &dyn Value, right: &dyn Value, name: &str) -> ConstOrDynamicValue {
         let name = CString::from_str(name).unwrap();
 

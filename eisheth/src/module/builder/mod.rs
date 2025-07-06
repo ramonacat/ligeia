@@ -329,7 +329,6 @@ impl ModuleBuilder {
                     )
                 })
                 .map(|x| {
-                    // TODO expose the priority and initialized_value so the user can pass them
                     InitializersEntryType::const_values(
                         &u32::representation().const_value(x.0),
                         &x.1,

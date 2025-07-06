@@ -1,3 +1,4 @@
+use eisheth::types::RepresentedAs;
 pub mod ffi;
 
 use eisheth::{
@@ -21,7 +22,14 @@ pub fn define(package_builder: &mut PackageBuilder) -> ValueDefinition {
         module.define_runtime_function(
             &FunctionDeclarationDescriptor::new(
                 "initialize_pointer",
-                types::Function::new(&types::Void, &[&types::Pointer, &types::Pointer]),
+                // TODO impl RepresentedAs for () with the type of Void
+                types::Function::new(
+                    &types::Void,
+                    &[
+                        &<*mut Value>::representation(),
+                        &<*mut u8>::representation(),
+                    ],
+                ),
                 Visibility::Export,
             ),
             runtime::initialize_pointer as unsafe extern "C" fn(*mut Value, *mut u8) as usize,
@@ -54,7 +62,7 @@ impl ImportedValueDefinition {
         value: &dyn eisheth::value::Value,
         target: &dyn eisheth::value::Value,
     ) {
-        i.direct_call(self.initialize_pointer, &[value, target], "");
+        let _ = i.direct_call(self.initialize_pointer, &[value, target], "");
     }
 }
 

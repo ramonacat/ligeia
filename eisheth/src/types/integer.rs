@@ -35,7 +35,6 @@ macro_rules! declare_integer_type {
                     }
                 }
 
-                #[must_use]
                 pub fn const_value(&self, x: [<u $bitcount>]) -> crate::value::ConstValue {
                     // SAFETY: The reference to the type is valid
                     let value = unsafe { LLVMConstInt(self.reference, u64::from(x), 0) };

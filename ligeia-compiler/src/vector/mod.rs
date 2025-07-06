@@ -1,7 +1,7 @@
 use eisheth::types::RepresentedAs;
 mod ffi;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, mem::MaybeUninit};
 
 use eisheth::{
     function::{
@@ -27,7 +27,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
     let initializer = module.define_function(
         &FunctionDeclarationDescriptor::new(
             "vector_initializer",
-            types::Function::new(&types::Void, &[&types::Pointer]),
+            types::Function::new(&types::Void, &[&<*mut Vector<T>>::representation()]),
             Visibility::Export,
         ),
         |f| {
@@ -76,7 +76,10 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
         module.define_runtime_function(
             &FunctionDeclarationDescriptor::new(
                 "push_uninitialized",
-                types::Function::new(&types::Pointer, &[&types::Pointer]),
+                types::Function::new(
+                    &<*mut MaybeUninit<T>>::representation(),
+                    &[&<*mut T>::representation()],
+                ),
                 Visibility::Export,
             ),
             runtime::push_uninitialized as unsafe extern "C" fn(*mut Vector<T>) -> *mut T as usize,
@@ -118,7 +121,7 @@ pub struct ImportedDefinition<T> {
 
 impl<T> ImportedDefinition<T> {
     pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn eisheth::value::Value) {
-        i.direct_call(self.initializer, &[pointer], "");
+        let _ = i.direct_call(self.initializer, &[pointer], "");
     }
 
     #[allow(unused)]

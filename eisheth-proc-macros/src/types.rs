@@ -21,8 +21,13 @@ pub fn rust_type_to_eisheth_type_instance(r#type: &Type, with_super: bool) -> To
                 todo!("path multiple idents");
             }
         }
-        Type::Ptr(_) => {
-            quote! { ::eisheth::types::Pointer }
+        Type::Ptr(target) => {
+            let r#mut = target.mutability;
+            let r#const = target.const_token;
+
+            // TODO: This is hacky and will break if we introduce pointer types that carry value
+            // types
+            quote! { <* #r#mut #r#const u8 as ::eisheth::types::RepresentedAs>::representation() }
         }
         Type::Reference(_) => todo!("Reference"),
         Type::Slice(_) => todo!("Slice"),
