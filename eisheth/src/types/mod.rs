@@ -11,7 +11,6 @@ pub use integer::Integer;
 use llvm_sys::prelude::LLVMTypeRef;
 pub use pointer::Pointer;
 pub use r#struct::Struct;
-pub use void::Void;
 
 pub trait RepresentedAs {
     type RepresentationType: Type;

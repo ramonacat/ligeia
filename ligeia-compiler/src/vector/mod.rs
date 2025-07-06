@@ -27,7 +27,10 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
     let initializer = module.define_function(
         &FunctionSignature::new(
             "vector_initializer",
-            types::Function::new(&types::Void, &[&<*mut Vector<T>>::representation()]),
+            types::Function::new(
+                &<()>::representation(),
+                &[&<*mut Vector<T>>::representation()],
+            ),
             Visibility::Export,
         ),
         |f| {

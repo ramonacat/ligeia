@@ -1,3 +1,4 @@
+use crate::types::RepresentedAs;
 mod global_initializers;
 
 use std::{
@@ -30,7 +31,7 @@ use crate::{
 };
 
 thread_local! {
-    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(&types::Void, &[]);
+    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(&<()>::representation(), &[]);
 }
 
 #[derive(Debug)]

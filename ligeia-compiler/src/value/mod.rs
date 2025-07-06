@@ -22,9 +22,8 @@ pub fn define(package_builder: &mut PackageBuilder) -> ValueDefinition {
         module.define_runtime_function(
             &FunctionSignature::new(
                 "initialize_pointer",
-                // TODO impl RepresentedAs for () with the type of Void
                 types::Function::new(
-                    &types::Void,
+                    &<()>::representation(),
                     &[
                         &<*mut Value>::representation(),
                         &<*mut u8>::representation(),

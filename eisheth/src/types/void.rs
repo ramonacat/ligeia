@@ -3,8 +3,12 @@ use std::marker::PhantomData;
 use llvm_sys::{core::LLVMVoidTypeInContext, prelude::LLVMTypeRef};
 
 use super::Type;
-use crate::context::{Context, LLVM_CONTEXT};
+use crate::{
+    context::{Context, LLVM_CONTEXT},
+    types::RepresentedAs,
+};
 
+#[derive(Debug, Clone, Copy)]
 pub struct VoidType {
     reference: LLVMTypeRef,
     _context: PhantomData<&'static Context>,
@@ -32,10 +36,10 @@ thread_local! {
     static VOID_TYPE:VoidType = VoidType::new();
 }
 
-pub struct Void;
+impl RepresentedAs for () {
+    type RepresentationType = VoidType;
 
-impl Type for Void {
-    fn as_llvm_ref(&self) -> LLVMTypeRef {
-        VOID_TYPE.with(Type::as_llvm_ref)
+    fn representation() -> Self::RepresentationType {
+        VOID_TYPE.with(|void| *void)
     }
 }
