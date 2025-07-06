@@ -1,8 +1,6 @@
 use eisheth::{types::RepresentedAs, value::ConstValue};
 mod ffi;
 
-use std::{marker::PhantomData, mem::MaybeUninit};
-
 use eisheth::{
     function::{
         declaration::{FunctionSignature, Visibility},
@@ -18,19 +16,14 @@ use crate::vector::ffi::Vector;
 
 // TODO we should also allow for defining a vector of Opaque type, where only the FFI-side code
 // undrerstands the type inside
-// TODO we should probably get rid of the Rust generic and only rely on r#type, to allow actually
-// dynamically generating code that does vectors?
 // TODO add some debug_print method, that prints the contents of the vector
-pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) -> Definition<T> {
+pub fn define(package_builder: &mut PackageBuilder, element_type: &dyn Type) -> Definition {
     let module = package_builder.add_module("vector").unwrap();
 
     let initializer = module.define_function(
         &FunctionSignature::new(
             "vector_initializer",
-            types::Function::new(
-                &<()>::representation(),
-                &[&<*mut Vector<T>>::representation()],
-            ),
+            types::Function::new(&<()>::representation(), &[&<*mut Vector>::representation()]),
             Visibility::Export,
         ),
         |f| {
@@ -39,7 +32,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
             let vector = f.get_argument(0).unwrap();
 
             entry.build(|i| {
-                let memory_pointer = Vector::<T>::with_type(|r#type| {
+                let memory_pointer = Vector::with_type(|r#type| {
                     r#type
                         .get_field_pointer(&i, &vector, 0, "memory_pointer")
                         .unwrap()
@@ -49,7 +42,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                 let memory = i.malloc_array(element_type, &length, "memory");
                 i.store(&memory_pointer, &memory);
 
-                let capacity_pointer = Vector::<T>::with_type(|r#type| {
+                let capacity_pointer = Vector::with_type(|r#type| {
                     r#type
                         .get_field_pointer(&i, &vector, 1, "capacity_pointer")
                         .unwrap()
@@ -57,7 +50,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                 let capacity: ConstValue = 1u32.into();
                 i.store(&capacity_pointer, &capacity);
 
-                let length_pointer = Vector::<T>::with_type(|r#type| {
+                let length_pointer = Vector::with_type(|r#type| {
                     r#type
                         .get_field_pointer(&i, &vector, 2, "length_pointer")
                         .unwrap()
@@ -76,49 +69,45 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
             &FunctionSignature::new(
                 "push_uninitialized",
                 types::Function::new(
-                    &<*mut MaybeUninit<T>>::representation(),
-                    &[&<*mut T>::representation()],
+                    &<*mut u8>::representation(),
+                    &[&<*mut Vector>::representation()],
                 ),
                 Visibility::Export,
             ),
-            runtime::push_uninitialized as unsafe extern "C" fn(*mut Vector<T>) -> *mut T as usize,
+            runtime::push_uninitialized as unsafe extern "C" fn(*mut Vector) -> *mut u8 as usize,
         )
     };
 
     Definition {
         initializer,
         push_uninitialized,
-        _items: PhantomData,
     }
 }
 
-pub struct Definition<T> {
+pub struct Definition {
     initializer: DeclaredFunctionDescriptor,
     push_uninitialized: DeclaredFunctionDescriptor,
-    _items: PhantomData<*mut T>,
 }
 
-impl<T> Definition<T> {
-    pub(crate) fn import_into(&self, module: &mut ModuleBuilder) -> ImportedDefinition<T> {
+impl Definition {
+    pub(crate) fn import_into(&self, module: &mut ModuleBuilder) -> ImportedDefinition {
         let initializer = module.import_function(self.initializer).unwrap();
         let push_uninitialized = module.import_function(self.push_uninitialized).unwrap();
 
         ImportedDefinition {
             initializer,
             push_uninitialized,
-            _items: PhantomData,
         }
     }
 }
 
 // TODO we should have element type here probably and validate wherever possible?
-pub struct ImportedDefinition<T> {
+pub struct ImportedDefinition {
     initializer: DeclaredFunctionDescriptor,
     push_uninitialized: DeclaredFunctionDescriptor,
-    _items: PhantomData<*mut T>,
 }
 
-impl<T> ImportedDefinition<T> {
+impl ImportedDefinition {
     pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn eisheth::value::Value) {
         let _ = i.direct_call(self.initializer, &[pointer], "");
     }
@@ -133,9 +122,9 @@ impl<T> ImportedDefinition<T> {
     }
 }
 
-impl<T> Type for ImportedDefinition<T> {
+impl Type for ImportedDefinition {
     fn as_llvm_ref(&self) -> eisheth::llvm_sys::prelude::LLVMTypeRef {
-        Vector::<T>::with_type(Type::as_llvm_ref)
+        Vector::with_type(Type::as_llvm_ref)
     }
 }
 
@@ -144,7 +133,7 @@ mod runtime {
 
     // TODO: This should do an actual push, i.e. add to length and do a realloc and increase
     // capacity if needed
-    pub(super) unsafe extern "C" fn push_uninitialized<T>(vector: *mut Vector<T>) -> *mut T {
+    pub(super) unsafe extern "C" fn push_uninitialized(vector: *mut Vector) -> *mut u8 {
         // SAFETY: It's up to the user to ensure that `vector` is a valid pointer and that they
         // won't use the returned refernce for longer than the `vector` is valid
         (unsafe { &*vector }).data

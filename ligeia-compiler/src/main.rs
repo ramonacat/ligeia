@@ -32,7 +32,7 @@ fn main() {
 
     let value_definition = value::define(&mut package_builder);
     let value_vector_definition =
-        Value::with_type(|r#type| vector::define::<Value>(&mut package_builder, r#type));
+        Value::with_type(|r#type| vector::define(&mut package_builder, r#type));
 
     let main_module = package_builder.add_module("main").unwrap();
 
