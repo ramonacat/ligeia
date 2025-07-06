@@ -8,7 +8,7 @@ use llvm_sys::{
 
 use super::{
     block::FunctionBlock,
-    declaration::{FunctionDeclarationDescriptor, Visibility},
+    declaration::{FunctionSignature, Visibility},
 };
 use crate::{
     module::{AnyModule, builder::ModuleBuilder},
@@ -60,10 +60,7 @@ impl<'module> FunctionBuilder<'module> {
     /// # Panics
     /// Will panic if the function name cannot be expressed as a `CString`
     #[must_use]
-    pub fn new(
-        module: &'module ModuleBuilder,
-        declaration: &FunctionDeclarationDescriptor,
-    ) -> Self {
+    pub fn new(module: &'module ModuleBuilder, declaration: &FunctionSignature) -> Self {
         let name = CString::from_str(declaration.name()).unwrap();
 
         let function =

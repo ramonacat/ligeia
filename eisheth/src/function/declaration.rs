@@ -6,14 +6,13 @@ pub enum Visibility {
     Export,
 }
 
-// TODO rename -> FunctionSignature?
-pub struct FunctionDeclarationDescriptor {
+pub struct FunctionSignature {
     name: String,
     r#type: types::Function,
     visibility: Visibility,
 }
 
-impl FunctionDeclarationDescriptor {
+impl FunctionSignature {
     pub fn new(name: impl Into<String>, r#type: types::Function, visibility: Visibility) -> Self {
         Self {
             name: name.into(),

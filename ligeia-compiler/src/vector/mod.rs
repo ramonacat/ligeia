@@ -5,7 +5,7 @@ use std::{marker::PhantomData, mem::MaybeUninit};
 
 use eisheth::{
     function::{
-        declaration::{FunctionDeclarationDescriptor, Visibility},
+        declaration::{FunctionSignature, Visibility},
         instruction_builder::InstructionBuilder,
     },
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
@@ -25,7 +25,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
     let module = package_builder.add_module("vector").unwrap();
 
     let initializer = module.define_function(
-        &FunctionDeclarationDescriptor::new(
+        &FunctionSignature::new(
             "vector_initializer",
             types::Function::new(&types::Void, &[&<*mut Vector<T>>::representation()]),
             Visibility::Export,
@@ -70,7 +70,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
     // SAFETY: The signature of the rust-side function matches the one in the FFI-side declaration
     let push_uninitialized = unsafe {
         module.define_runtime_function(
-            &FunctionDeclarationDescriptor::new(
+            &FunctionSignature::new(
                 "push_uninitialized",
                 types::Function::new(
                     &<*mut MaybeUninit<T>>::representation(),

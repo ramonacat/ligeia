@@ -3,7 +3,7 @@ mod value;
 mod vector;
 
 use eisheth::{
-    function::declaration::{FunctionDeclarationDescriptor, Visibility},
+    function::declaration::{FunctionSignature, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types::{self},
@@ -17,7 +17,7 @@ fn main() {
 
     let side_module = package_builder.add_module("side").unwrap();
     let side = side_module.define_function(
-        &FunctionDeclarationDescriptor::new(
+        &FunctionSignature::new(
             "side_fn",
             types::Function::new(&u64::representation(), &[]),
             Visibility::Export,
@@ -60,7 +60,7 @@ fn main() {
 
     let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
-        &FunctionDeclarationDescriptor::new(
+        &FunctionSignature::new(
             "other",
             types::Function::new(&u64::representation(), &[&u64::representation()]),
             Visibility::Internal,
@@ -78,7 +78,7 @@ fn main() {
         },
     );
     let main_function = main_module.define_function(
-        &FunctionDeclarationDescriptor::new(
+        &FunctionSignature::new(
             "main",
             types::Function::new(&u64::representation(), &[&u64::representation()]),
             Visibility::Export,

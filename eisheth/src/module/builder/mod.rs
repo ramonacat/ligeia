@@ -20,7 +20,7 @@ use crate::{
     context::LLVM_CONTEXT,
     function::{
         builder::{FunctionBuilder, FunctionReference},
-        declaration::{FunctionDeclarationDescriptor, Visibility},
+        declaration::{FunctionSignature, Visibility},
     },
     global_symbol::GlobalSymbols,
     module::builder::global_initializers::{GLOBAL_INITIALIZERS_ENTRY_TYPE, InitializersEntryType},
@@ -110,7 +110,7 @@ impl ModuleBuilder {
     /// matches the signature declared in `declaration`
     pub unsafe fn define_runtime_function(
         &mut self,
-        declaration: &FunctionDeclarationDescriptor,
+        declaration: &FunctionSignature,
         runtime_function_address: usize,
     ) -> DeclaredFunctionDescriptor {
         let id = DeclaredFunctionDescriptor {
@@ -137,7 +137,7 @@ impl ModuleBuilder {
     // TODO: some cute macro so that these functions are easier to define?
     pub fn define_function(
         &mut self,
-        declaration: &FunctionDeclarationDescriptor,
+        declaration: &FunctionSignature,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> DeclaredFunctionDescriptor {
         let id = DeclaredFunctionDescriptor {
@@ -168,7 +168,7 @@ impl ModuleBuilder {
     ) {
         let function = GLOBAL_INITIALIZER_TYPE.with(|initializer| {
             self.define_function(
-                &FunctionDeclarationDescriptor::new(
+                &FunctionSignature::new(
                     format!("global_initializer_{name}"),
                     *initializer,
                     Visibility::Internal,

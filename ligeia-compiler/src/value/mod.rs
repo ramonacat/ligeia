@@ -3,7 +3,7 @@ pub mod ffi;
 
 use eisheth::{
     function::{
-        declaration::{FunctionDeclarationDescriptor, Visibility},
+        declaration::{FunctionSignature, Visibility},
         instruction_builder::InstructionBuilder,
     },
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
@@ -20,7 +20,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> ValueDefinition {
     // SAFETY: The function signature on Rust side matches the FFI-side
     let initialize_pointer = unsafe {
         module.define_runtime_function(
-            &FunctionDeclarationDescriptor::new(
+            &FunctionSignature::new(
                 "initialize_pointer",
                 // TODO impl RepresentedAs for () with the type of Void
                 types::Function::new(
