@@ -1,5 +1,7 @@
 use llvm_sys::{core::LLVMIsConstant, prelude::LLVMValueRef};
 
+// TODO all the kinds of values should depend on the lifetime of the module
+// TODO all the kinds of values should implement Copy
 pub trait Value {
     fn as_llvm_ref(&self) -> LLVMValueRef;
 }

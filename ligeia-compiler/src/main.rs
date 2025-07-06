@@ -42,7 +42,8 @@ fn main() {
     let test_type =
         main_module.define_global("type", &types::U64, Some(&types::U64::const_value(1)));
 
-    main_module.define_global_initializer("types", |function| {
+    // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
+    main_module.define_global_initializer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
             vector_definition_in_main.initialize(&i, &types);

@@ -59,12 +59,18 @@ pub enum FunctionImportError {
     DefinedInThisModule(DeclaredFunctionDescriptor),
 }
 
+struct GlobalInitializerDescriptor {
+    priority: u32,
+    function: DeclaredFunctionDescriptor,
+    initialized_data_pointer: Option<ConstValue>,
+}
+
 pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
     functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
-    global_initializers: Vec<DeclaredFunctionDescriptor>,
+    global_initializers: Vec<GlobalInitializerDescriptor>,
     global_mappings: HashMap<String, usize>,
 }
 
@@ -156,6 +162,8 @@ impl ModuleBuilder {
     pub fn define_global_initializer(
         &mut self,
         name: &str,
+        priority: u32,
+        initialized_data_pointer: Option<ConstValue>,
         implement: impl FnOnce(&FunctionBuilder),
     ) {
         let function = GLOBAL_INITIALIZER_TYPE.with(|initializer| {
@@ -168,7 +176,11 @@ impl ModuleBuilder {
                 implement,
             )
         });
-        self.global_initializers.push(function);
+        self.global_initializers.push(GlobalInitializerDescriptor {
+            priority,
+            function,
+            initialized_data_pointer,
+        });
     }
 
     /// # Panics
@@ -308,10 +320,16 @@ impl ModuleBuilder {
             let initializer_values: Vec<_> = self
                 .global_initializers
                 .iter()
-                .map(|x| self.get_function(*x).as_value())
+                .map(|x| {
+                    (
+                        x.priority,
+                        self.get_function(x.function).as_value(),
+                        x.initialized_data_pointer.as_ref(),
+                    )
+                })
                 .map(|x| {
                     // TODO expose the priority and initialized_value so the user can pass them
-                    InitializersEntryType::const_values(&types::U32::const_value(0), &x, None)
+                    InitializersEntryType::const_values(&types::U32::const_value(x.0), &x.1, x.2)
                 })
                 .collect();
 
