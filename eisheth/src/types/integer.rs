@@ -90,3 +90,5 @@ macro_rules! declare_integer_type {
 
 declare_integer_type!(64);
 declare_integer_type!(32);
+declare_integer_type!(16);
+declare_integer_type!(8);

@@ -23,7 +23,7 @@ use crate::{
         declaration::{FunctionDeclarationDescriptor, Visibility},
     },
     global_symbol::GlobalSymbols,
-    module::builder::global_initializers::GLOBAL_INITIALIZERS_ENTRY_TYPE,
+    module::builder::global_initializers::{GLOBAL_INITIALIZERS_ENTRY_TYPE, InitializersEntryType},
     package::context::PackageContext,
     types::{self, Type},
     value::{ConstValue, Value as _},
@@ -65,6 +65,7 @@ pub struct ModuleBuilder {
     symbols: Rc<GlobalSymbols>,
     functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
     global_initializers: Vec<DeclaredFunctionDescriptor>,
+    global_mappings: HashMap<String, usize>,
 }
 
 impl ModuleBuilder {
@@ -87,6 +88,7 @@ impl ModuleBuilder {
             symbols,
             functions: HashMap::new(),
             global_initializers: vec![],
+            global_mappings: HashMap::new(),
         }
     }
 
@@ -94,6 +96,39 @@ impl ModuleBuilder {
         self.reference
     }
 
+    // TODO: some cute macro so that these functions are easier to define?
+    /// # Panics
+    /// Will panic if the name cannot be converted into a c-string.
+    /// # Safety
+    /// The `runtime_function_address` must point at a function with `extern "C"` linkage, that
+    /// matches the signature declared in `declaration`
+    pub unsafe fn define_runtime_function(
+        &mut self,
+        declaration: &FunctionDeclarationDescriptor,
+        runtime_function_address: usize,
+    ) -> DeclaredFunctionDescriptor {
+        let id = DeclaredFunctionDescriptor {
+            module_id: self.id,
+            name: self.symbols.intern(declaration.name()),
+            r#type: declaration.r#type(),
+            visibility: declaration.visibility(),
+        };
+
+        let name = self.symbols.resolve(id.name);
+        let c_name = CString::from_str(&name).unwrap();
+
+        let function =
+            // SAFETY: All the passed values come from objects which uphold guarantees about the
+            // pointers being valid
+            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
+
+        self.functions.insert(id, function);
+        self.global_mappings.insert(name, runtime_function_address);
+
+        id
+    }
+
+    // TODO: some cute macro so that these functions are easier to define?
     pub fn define_function(
         &mut self,
         declaration: &FunctionDeclarationDescriptor,
@@ -175,6 +210,9 @@ impl ModuleBuilder {
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         self.build_global_initializers();
+        //
+        // SAFETY: We have a valid, non-null `reference`, so this function can't fail
+        unsafe { LLVMDumpModule(self.reference) };
 
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
@@ -201,8 +239,6 @@ impl ModuleBuilder {
                 message,
             });
         }
-        // SAFETY: We have a valid, non-null `reference`, so this function can't fail
-        unsafe { LLVMDumpModule(self.reference) };
 
         let reference = self.reference;
         self.reference = std::ptr::null_mut();
@@ -210,8 +246,8 @@ impl ModuleBuilder {
         let mut functions = HashMap::new();
         std::mem::swap(&mut functions, &mut self.functions);
 
-        let mut global_initializers = vec![];
-        std::mem::swap(&mut global_initializers, &mut self.global_initializers);
+        let mut global_mappings = HashMap::new();
+        std::mem::swap(&mut global_mappings, &mut self.global_mappings);
 
         // SAFETY: We have ensured that the reference is not owned by this current object
         Ok(unsafe {
@@ -220,7 +256,7 @@ impl ModuleBuilder {
                 reference,
                 functions,
                 self.symbols.clone(),
-                global_initializers,
+                global_mappings,
             )
         })
     }
@@ -260,10 +296,20 @@ impl ModuleBuilder {
         let global = GLOBAL_INITIALIZERS_ENTRY_TYPE.with(|r#type| {
             let initializers_array_type = types::Array::new(r#type, self.global_initializers.len());
 
+            let initializer_values: Vec<_> = self
+                .global_initializers
+                .iter()
+                .map(|x| self.get_function(*x).as_value())
+                .map(|x| {
+                    // TODO expose the priority and initialized_value so the user can pass them
+                    InitializersEntryType::const_values(&types::U32::const_value(0), &x, None)
+                })
+                .collect();
+
             self.define_global(
                 "llvm.global_ctors",
                 &initializers_array_type,
-                &initializers_array_type.const_uninitialized().unwrap(),
+                &initializers_array_type.const_values(&initializer_values),
             )
         });
 

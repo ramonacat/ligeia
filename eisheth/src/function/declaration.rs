@@ -6,6 +6,7 @@ pub enum Visibility {
     Export,
 }
 
+// TODO rename -> FunctionSignature?
 pub struct FunctionDeclarationDescriptor {
     name: String,
     r#type: types::Function,

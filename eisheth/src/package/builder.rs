@@ -84,7 +84,7 @@ impl PackageBuilder {
             }
         });
 
-        let final_module = built_modules
+        let mut final_module = built_modules
             .pop()
             .expect("package should contain at least a single module");
 

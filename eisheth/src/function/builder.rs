@@ -13,7 +13,7 @@ use super::{
 use crate::{
     module::{AnyModule, builder::ModuleBuilder},
     types::{self, Type},
-    value::DynamicValue,
+    value::{ConstValue, DynamicValue},
 };
 
 pub(crate) struct FunctionReference<'module> {
@@ -42,6 +42,11 @@ impl<'module> FunctionReference<'module> {
 
     pub(crate) const fn as_llvm_ref(&self) -> LLVMValueRef {
         self.reference
+    }
+
+    pub(crate) fn as_value(&self) -> ConstValue {
+        // SAFETY: The reference is valid, we own it
+        unsafe { ConstValue::new(self.reference) }
     }
 }
 

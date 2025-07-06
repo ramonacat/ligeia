@@ -2,9 +2,9 @@ use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use llvm_sys::{
     core::{
-        LLVMBuildAdd, LLVMBuildArrayMalloc, LLVMBuildCall2, LLVMBuildMalloc, LLVMBuildRet,
-        LLVMBuildRetVoid, LLVMBuildStore, LLVMCreateBuilderInContext, LLVMDisposeBuilder,
-        LLVMPositionBuilderAtEnd,
+        LLVMBuildAdd, LLVMBuildArrayMalloc, LLVMBuildCall2, LLVMBuildLoad2, LLVMBuildMalloc,
+        LLVMBuildRet, LLVMBuildRetVoid, LLVMBuildStore, LLVMCreateBuilderInContext,
+        LLVMDisposeBuilder, LLVMPositionBuilderAtEnd,
     },
     prelude::LLVMBuilderRef,
 };
@@ -127,6 +127,24 @@ impl<'module> InstructionBuilder<'module> {
                 target_pointer.as_llvm_ref(),
             )
         };
+    }
+
+    /// # Panics
+    /// Will panic if the name cannpt be converted to a `CString`
+    pub fn load(&self, pointer: &dyn Value, r#type: &dyn Type, name: &str) -> DynamicValue {
+        let name = CString::from_str(name).unwrap();
+        // SAFETY: all the values come from safe wrappers, so the pointers must be valid
+        let result = unsafe {
+            LLVMBuildLoad2(
+                self.builder,
+                r#type.as_llvm_ref(),
+                pointer.as_llvm_ref(),
+                name.as_ptr(),
+            )
+        };
+
+        // SAFETY: We just crated the value, it must be valid
+        unsafe { DynamicValue::new(result) }
     }
 
     #[must_use]

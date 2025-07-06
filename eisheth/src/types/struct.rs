@@ -2,8 +2,8 @@ use std::{ffi::CString, marker::PhantomData, str::FromStr};
 
 use llvm_sys::{
     core::{
-        LLVMBuildStructGEP2, LLVMConstNamedStruct, LLVMCountStructElementTypes,
-        LLVMStructCreateNamed, LLVMStructSetBody,
+        LLVMBuildGEP2, LLVMConstNamedStruct, LLVMCountStructElementTypes, LLVMStructCreateNamed,
+        LLVMStructSetBody,
     },
     prelude::LLVMTypeRef,
 };
@@ -12,7 +12,7 @@ use super::Type;
 use crate::{
     context::{Context, LLVM_CONTEXT},
     function::instruction_builder::InstructionBuilder,
-    types::ConstValue,
+    types::{self, ConstValue},
     value::{DynamicValue, Value},
 };
 
@@ -90,14 +90,20 @@ impl Struct {
 
         let name = CString::new(name).unwrap();
 
+        let mut indices = vec![
+            types::U32::const_value(0).as_llvm_ref(),
+            types::U32::const_value(index.try_into().unwrap()).as_llvm_ref(),
+        ];
+
         // SAFETY: We have a valid builder, valid type reference, a valid pointer, valid name and
         // the index has been bounds checked.
         let value = unsafe {
-            LLVMBuildStructGEP2(
+            LLVMBuildGEP2(
                 i.builder(),
                 self.reference,
                 pointer.as_llvm_ref(),
-                u32::try_from(index).unwrap(),
+                indices.as_mut_ptr(),
+                u32::try_from(indices.len()).unwrap(),
                 name.as_ptr(),
             )
         };

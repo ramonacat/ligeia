@@ -6,7 +6,7 @@ use llvm_sys::{
 use crate::{
     context::LLVM_CONTEXT,
     types::{self, Type},
-    value::{ConstValue, Value as _},
+    value::{ConstValue, Value},
 };
 
 thread_local! {
@@ -33,6 +33,35 @@ impl InitializersEntryType {
         };
 
         Self(initializers_type)
+    }
+
+    pub(crate) fn const_values(
+        priority: &ConstValue,
+        initializer: &ConstValue,
+        initialized_value: Option<&ConstValue>,
+    ) -> ConstValue {
+        let mut values = vec![
+            priority.as_llvm_ref(),
+            initializer.as_llvm_ref(),
+            initialized_value.map_or_else(
+                || types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
+                Value::as_llvm_ref,
+            ),
+        ];
+
+        // SAFETY: The values were crated from valid wrapper objects, the pointer and length are
+        // valid, the context is valid
+        let result = LLVM_CONTEXT.with(|context| unsafe {
+            LLVMConstStructInContext(
+                context.as_llvm_ref(),
+                values.as_mut_ptr(),
+                u32::try_from(values.len()).unwrap(),
+                0,
+            )
+        });
+
+        // SAFETY: We just created the value, it is correct
+        unsafe { ConstValue::new(result) }
     }
 }
 

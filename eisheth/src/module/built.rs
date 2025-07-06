@@ -14,28 +14,23 @@ pub struct Module {
     reference: LLVMModuleRef,
     functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
     symbols: Rc<GlobalSymbols>,
+    global_mappings: HashMap<String, usize>,
 }
 
 impl Module {
-    pub(crate) fn into_llvm_ref(mut self) -> *mut llvm_sys::LLVMModule {
-        let result = self.reference;
-        self.reference = std::ptr::null_mut();
-
-        result
-    }
-
-    pub(crate) unsafe fn new(
+    pub(crate) const unsafe fn new(
         id: ModuleId,
         reference: *mut llvm_sys::LLVMModule,
         functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
         symbols: Rc<GlobalSymbols>,
-        _global_initializers: Vec<DeclaredFunctionDescriptor>,
+        global_mappings: HashMap<String, usize>,
     ) -> Self {
         Self {
             id,
             reference,
             functions,
             symbols,
+            global_mappings,
         }
     }
 
@@ -51,7 +46,7 @@ impl Module {
         Function::new(self, *function, id.r#type)
     }
 
-    pub(crate) fn link(&self, mut module: Self) {
+    pub(crate) fn link(&mut self, mut module: Self) {
         let reference = module.reference;
         module.reference = std::ptr::null_mut();
         // SAFETY: if the Module object exists, the reference must be valid, and we're consuming
@@ -59,10 +54,18 @@ impl Module {
         let is_failed = unsafe { LLVMLinkModules2(self.reference, reference) } != 0;
 
         assert!(!is_failed, "Linking modules failed");
+
+        self.global_mappings.extend(module.global_mappings.drain());
     }
 
     pub(crate) fn symbols(&self) -> Rc<GlobalSymbols> {
         self.symbols.clone()
+    }
+
+    pub(crate) fn take(mut self) -> (HashMap<String, usize>, LLVMModuleRef) {
+        let module_reference = self.reference;
+        self.reference = std::ptr::null_mut();
+        (self.global_mappings.drain().collect(), module_reference)
     }
 }
 

@@ -2,7 +2,7 @@ pub mod function;
 
 use std::{
     error::Error,
-    ffi::{CStr, CString},
+    ffi::{CStr, CString, c_void},
     fmt::Display,
     mem::MaybeUninit,
     rc::Rc,
@@ -12,10 +12,10 @@ use std::{
 
 use function::JitFunction;
 use llvm_sys::{
-    core::LLVMDisposeMessage,
+    core::{LLVMDisposeMessage, LLVMDumpModule, LLVMGetNamedFunction},
     execution_engine::{
-        LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine, LLVMExecutionEngineRef,
-        LLVMGetFunctionAddress, LLVMLinkInMCJIT, LLVMRunStaticConstructors,
+        LLVMAddGlobalMapping, LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine,
+        LLVMExecutionEngineRef, LLVMGetFunctionAddress, LLVMLinkInMCJIT, LLVMRunStaticConstructors,
         LLVMRunStaticDestructors,
     },
     target::{LLVM_InitializeNativeAsmPrinter, LLVM_InitializeNativeTarget},
@@ -64,6 +64,14 @@ impl Jit {
         let symbols = package.symbols();
         let module = package.into_module();
 
+        let (global_mappings, module_reference) = module.take();
+
+        // TODO expose an API so the user can print the IR whatever way they want, instead of
+        // printing here
+        eprintln!("===FINAL LINKED MODULE===");
+        // SAFETY: We just got the module_reference from a safe wrapper, so it must be valid
+        unsafe { LLVMDumpModule(module_reference) };
+
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();
             let mut error_raw = std::ptr::null_mut();
@@ -73,7 +81,7 @@ impl Jit {
             if unsafe {
                 LLVMCreateExecutionEngineForModule(
                     engine.as_mut_ptr(),
-                    module.into_llvm_ref(),
+                    module_reference,
                     &raw mut error_raw,
                 )
             } != 0
@@ -96,6 +104,20 @@ impl Jit {
             // execution engine
             unsafe { engine.assume_init() }
         };
+
+        for (name, address) in global_mappings {
+            let name = CString::from_str(&name).unwrap();
+            // TODO support globals other than functions?
+            // SAFETY: The module_reference is valid, as it came from a safe wrapper, we just
+            // crated the name so it's also a valid pointer
+            let value = unsafe { LLVMGetNamedFunction(module_reference, name.as_ptr()) };
+            assert!(!value.is_null(), "Global called {name:?} not found");
+
+            // SAFETY: The caller must ensure that the address is correct, we just got the value,
+            // so it's valid (and type-matching is up to the caller). The execution_engine is
+            // valid, as it was just created.
+            unsafe { LLVMAddGlobalMapping(execution_engine, value, address as *mut c_void) };
+        }
 
         // SAFETY: We just initialized the engine, it's valid and ready to run static constructors
         unsafe { LLVMRunStaticConstructors(execution_engine) };

@@ -5,7 +5,7 @@ use llvm_sys::{
 
 use crate::{
     types::Type,
-    value::{ConstValue, Value as _},
+    value::{ConstValue, Value},
 };
 
 pub struct Array<'a> {
@@ -21,6 +21,23 @@ impl<'a> Array<'a> {
             reference,
             element_type,
         }
+    }
+
+    pub(crate) fn const_values(&self, initializer_values: &[ConstValue]) -> ConstValue {
+        let mut values: Vec<_> = initializer_values.iter().map(Value::as_llvm_ref).collect();
+
+        // SAFETY: The values are of correct type and valid pointers, the length matches, and
+        // element_type is a vaid pointer
+        let result = unsafe {
+            LLVMConstArray2(
+                self.element_type.as_llvm_ref(),
+                values.as_mut_ptr(),
+                u64::try_from(values.len()).unwrap(),
+            )
+        };
+
+        // SAFETY: We just created the result, it is valid
+        unsafe { ConstValue::new(result) }
     }
 }
 

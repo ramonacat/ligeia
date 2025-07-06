@@ -1,3 +1,4 @@
+mod value;
 mod vector;
 
 use eisheth::{
@@ -6,6 +7,8 @@ use eisheth::{
     package::builder::PackageBuilder,
     types::{self, Type},
 };
+
+use crate::value::ffi::Value;
 
 fn main() {
     let mut package_builder = PackageBuilder::new();
@@ -24,22 +27,31 @@ fn main() {
         },
     );
 
-    let vector_definition = vector::define::<u32>(&mut package_builder);
+    let value_definition = value::define(&mut package_builder);
+    let value_vector_definition =
+        Value::with_type(|r#type| vector::define::<Value>(&mut package_builder, r#type));
 
     let main_module = package_builder.add_module("main").unwrap();
 
-    let imported_defintion = vector_definition.import_into(main_module);
+    // TODO: some nice interface so the imports are more readable?
+    let vector_definition_in_main = value_vector_definition.import_into(main_module);
+    let value_definition_in_main = value_definition.import_into(main_module);
 
-    let test_vector = main_module.define_global(
-        "test vector",
-        &imported_defintion,
-        &imported_defintion.const_uninitialized().unwrap(),
+    let types = main_module.define_global(
+        "types",
+        &vector_definition_in_main,
+        &vector_definition_in_main.const_uninitialized().unwrap(),
     );
 
-    main_module.define_global_initializer("init_test_vector", |function| {
+    let test_type = main_module.define_global("type", &types::U64, &types::U64::const_value(1));
+
+    main_module.define_global_initializer("types", |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            imported_defintion.initialize(&i, &test_vector);
+            vector_definition_in_main.initialize(&i, &types);
+
+            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
 
             i.r#return(None)
         });
