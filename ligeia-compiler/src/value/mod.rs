@@ -59,14 +59,13 @@ impl ImportedValueDefinition {
 }
 
 mod runtime {
-    use crate::value::ffi::{Type, Value};
+    use crate::value::ffi::Value;
 
     pub(super) unsafe extern "C" fn initialize_pointer(value: *mut Value, target_pointer: *mut u8) {
         // SAFETY: It's up to the user to provide a a valid pointer to a value and a valid
         // target_pointer. As long as those are correct, the created Value will be valid
         unsafe {
-            (*value).r#type = Type::Pointer;
-            (*value).data = target_pointer as u64;
+            Value::initialize_pointer(value, target_pointer);
         }
     }
 }
