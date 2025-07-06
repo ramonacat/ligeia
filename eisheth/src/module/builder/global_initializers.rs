@@ -44,7 +44,7 @@ impl InitializersEntryType {
             priority.as_llvm_ref(),
             initializer.as_llvm_ref(),
             initialized_value.map_or_else(
-                || types::PointerType::const_null().as_llvm_ref(),
+                || types::Pointer::const_null().as_llvm_ref(),
                 Value::as_llvm_ref,
             ),
         ];

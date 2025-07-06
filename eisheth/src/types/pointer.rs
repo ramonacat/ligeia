@@ -13,13 +13,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-//TODO rename -> Pointer, also IntegerType -> Integer
-pub struct PointerType {
+pub struct Pointer {
     reference: LLVMTypeRef,
     _context: PhantomData<&'static Context>,
 }
 
-impl PointerType {
+impl Pointer {
     fn new() -> Self {
         let reference = LLVM_CONTEXT.with(|context| {
             // SAFETY: We know the context is valid, therefore the preconditions for this call are
@@ -42,18 +41,18 @@ impl PointerType {
     }
 }
 
-impl Type for PointerType {
+impl Type for Pointer {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
 }
 
 thread_local! {
-    static POINTER:PointerType = PointerType::new();
+    static POINTER:Pointer = Pointer::new();
 }
 
 impl<T> RepresentedAs for *mut T {
-    type RepresentationType = PointerType;
+    type RepresentationType = Pointer;
 
     fn representation() -> Self::RepresentationType {
         POINTER.with(|x| *x)
@@ -84,7 +83,7 @@ impl<T> From<*mut T> for ConstValue {
 }
 
 impl<T> RepresentedAs for *const T {
-    type RepresentationType = PointerType;
+    type RepresentationType = Pointer;
 
     fn representation() -> Self::RepresentationType {
         POINTER.with(|x| *x)

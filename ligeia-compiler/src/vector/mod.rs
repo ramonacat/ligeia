@@ -42,12 +42,8 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .unwrap()
                 });
 
-                let length:ConstValue = 1u64.into();
-                let memory = i.malloc_array(
-                    element_type,
-                    &length,
-                    "memory",
-                );
+                let length: ConstValue = 1u64.into();
+                let memory = i.malloc_array(element_type, &length, "memory");
                 i.store(&memory_pointer, &memory);
 
                 let capacity_pointer = Vector::<T>::with_type(|r#type| {
@@ -55,7 +51,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .get_field_pointer(&i, &vector, 1, "capacity_pointer")
                         .unwrap()
                 });
-                let capacity:ConstValue = 1u32.into();
+                let capacity: ConstValue = 1u32.into();
                 i.store(&capacity_pointer, &capacity);
 
                 let length_pointer = Vector::<T>::with_type(|r#type| {
@@ -63,7 +59,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .get_field_pointer(&i, &vector, 2, "length_pointer")
                         .unwrap()
                 });
-                let length:ConstValue = 0u32.into();
+                let length: ConstValue = 0u32.into();
                 i.store(&length_pointer, &length);
 
                 i.r#return(None)

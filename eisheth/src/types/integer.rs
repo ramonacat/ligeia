@@ -10,12 +10,12 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub struct IntegerType<const TBITS: usize> {
+pub struct Integer<const TBITS: usize> {
     reference: LLVMTypeRef,
     _phantom: PhantomData<&'static Context>,
 }
 
-impl<const TBITS: usize> Type for IntegerType<TBITS> {
+impl<const TBITS: usize> Type for Integer<TBITS> {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
@@ -24,7 +24,7 @@ impl<const TBITS: usize> Type for IntegerType<TBITS> {
 macro_rules! declare_integer_type {
     ($bitcount:expr) => {
         paste::paste!{
-            impl IntegerType<$bitcount> {
+            impl Integer<$bitcount> {
                 fn new() -> Self {
                     Self {
                         // SAFETY: We have a valid context
@@ -45,14 +45,14 @@ macro_rules! declare_integer_type {
             }
 
             thread_local! {
-                static [<U $bitcount _ID>]:IntegerType<$bitcount>
-                    = IntegerType::<$bitcount>::new();
+                static [<U $bitcount _ID>]:Integer<$bitcount>
+                    = Integer::<$bitcount>::new();
             }
 
             impl RepresentedAs for [<u $bitcount>] {
-                type RepresentationType = IntegerType<$bitcount>;
+                type RepresentationType = Integer<$bitcount>;
 
-                fn representation() -> IntegerType<$bitcount> {
+                fn representation() -> Integer<$bitcount> {
                     [<U $bitcount _ID>].with(|x| *x)
                 }
             }

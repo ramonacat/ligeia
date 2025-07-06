@@ -327,13 +327,7 @@ impl ModuleBuilder {
                         x.initialized_data_pointer.as_ref(),
                     )
                 })
-                .map(|x| {
-                    InitializersEntryType::const_values(
-                        &x.0.into(),
-                        &x.1,
-                        x.2,
-                    )
-                })
+                .map(|x| InitializersEntryType::const_values(&x.0.into(), &x.1, x.2))
                 .collect();
 
             self.define_global(

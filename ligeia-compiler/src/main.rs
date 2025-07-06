@@ -2,12 +2,12 @@ use eisheth::types::RepresentedAs;
 mod value;
 mod vector;
 
-use eisheth::value::ConstValue;
 use eisheth::{
     function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
     types::{self},
+    value::ConstValue,
 };
 
 use crate::value::ffi::Value;
@@ -25,7 +25,7 @@ fn main() {
         |function| {
             let block = function.create_block("entry");
 
-            let result:ConstValue = 7u64.into();
+            let result: ConstValue = 7u64.into();
             block.build(|i| i.r#return(Some(&result)));
         },
     );
@@ -42,12 +42,8 @@ fn main() {
 
     let types = main_module.define_global("types", &vector_definition_in_main, None);
 
-    let type_value:ConstValue = 1u64.into();
-    let test_type = main_module.define_global(
-        "type",
-        &u64::representation(),
-        Some(&type_value),
-    );
+    let type_value: ConstValue = 1u64.into();
+    let test_type = main_module.define_global("type", &u64::representation(), Some(&type_value));
 
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {
@@ -73,8 +69,8 @@ fn main() {
             let block = function.create_block("entry");
 
             block.build(|i| {
-                let left:ConstValue = 2u64.into();
-                let right:ConstValue = 11u64.into();
+                let left: ConstValue = 2u64.into();
+                let right: ConstValue = 11u64.into();
                 let sum = i.add(&left, &right, "sum");
 
                 i.r#return(Some(&sum))
@@ -91,14 +87,10 @@ fn main() {
             let entry = function.create_block("entry");
 
             entry.build(|i| {
-                let base:ConstValue = 32u64.into();
+                let base: ConstValue = 32u64.into();
                 let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
-                let arg:ConstValue = 2u64.into();
-                let value_from_other = i.direct_call(
-                    other,
-                    &[&arg],
-                    "calling_other",
-                );
+                let arg: ConstValue = 2u64.into();
+                let value_from_other = i.direct_call(other, &[&arg], "calling_other");
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
                 let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
