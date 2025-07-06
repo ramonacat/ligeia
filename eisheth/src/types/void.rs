@@ -3,10 +3,7 @@ use std::marker::PhantomData;
 use llvm_sys::{core::LLVMVoidTypeInContext, prelude::LLVMTypeRef};
 
 use super::Type;
-use crate::{
-    context::{Context, LLVM_CONTEXT},
-    value::ConstValue,
-};
+use crate::context::{Context, LLVM_CONTEXT};
 
 pub struct VoidType {
     reference: LLVMTypeRef,
@@ -16,10 +13,6 @@ pub struct VoidType {
 impl Type for VoidType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
-    }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        None
     }
 }
 
@@ -44,9 +37,5 @@ pub struct Void;
 impl Type for Void {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         VOID_TYPE.with(Type::as_llvm_ref)
-    }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        None
     }
 }

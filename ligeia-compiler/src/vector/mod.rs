@@ -128,10 +128,6 @@ impl<T> Type for ImportedDefinition<T> {
     fn as_llvm_ref(&self) -> eisheth::llvm_sys::prelude::LLVMTypeRef {
         Vector::<T>::with_type(Type::as_llvm_ref)
     }
-
-    fn const_uninitialized(&self) -> Option<eisheth::value::ConstValue> {
-        Vector::<T>::with_type(Type::const_uninitialized)
-    }
 }
 
 mod runtime {

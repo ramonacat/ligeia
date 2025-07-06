@@ -36,10 +36,6 @@ pub fn ffi_enum_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
             fn as_llvm_ref(&self) -> ::eisheth::llvm_sys::prelude::LLVMTypeRef {
                 #r#type.as_llvm_ref()
             }
-
-            fn const_uninitialized(&self) -> Option<::eisheth::value::ConstValue> {
-                #r#type.const_uninitialized()
-            }
         }
 
         impl ::eisheth::types::RepresentedAs for #name {

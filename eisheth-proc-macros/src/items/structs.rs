@@ -71,7 +71,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 pub static #type_static_name : ::eisheth::types::Struct =
                     ::eisheth::types::Struct::new(
                         #ffi_name,
-                        vec![
+                        &[
                             #(#field_types),*
                         ]
                     );

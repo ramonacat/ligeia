@@ -44,7 +44,7 @@ impl InitializersEntryType {
             priority.as_llvm_ref(),
             initializer.as_llvm_ref(),
             initialized_value.map_or_else(
-                || types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
+                || types::Pointer::const_null().as_llvm_ref(),
                 Value::as_llvm_ref,
             ),
         ];
@@ -68,27 +68,5 @@ impl InitializersEntryType {
 impl Type for InitializersEntryType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.0
-    }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        let mut values = vec![
-            types::U32.const_uninitialized().unwrap().as_llvm_ref(),
-            types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
-            types::Pointer.const_uninitialized().unwrap().as_llvm_ref(),
-        ];
-
-        // SAFETY: we know the context is valid, and values are all matching the definition of the
-        // type
-        let result = LLVM_CONTEXT.with(|context| unsafe {
-            LLVMConstStructInContext(
-                context.as_llvm_ref(),
-                values.as_mut_ptr(),
-                u32::try_from(values.len()).unwrap(),
-                0,
-            )
-        });
-
-        // SAFETY: We just crated the result, it's a valid pointer to a value
-        Some(unsafe { ConstValue::new(result) })
     }
 }

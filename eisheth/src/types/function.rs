@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::{context::Context, value::ConstValue};
+use crate::context::Context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {
@@ -19,10 +19,6 @@ pub struct Function {
 impl Type for Function {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
-    }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        None
     }
 }
 

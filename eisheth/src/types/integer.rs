@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use llvm_sys::{
-    core::LLVMConstInt,
-    prelude::{LLVMContextRef, LLVMTypeRef, LLVMValueRef},
-};
+use llvm_sys::prelude::{LLVMContextRef, LLVMTypeRef};
 
 use super::Type;
 use crate::{
@@ -13,7 +10,6 @@ use crate::{
 
 struct IntegerType {
     reference: LLVMTypeRef,
-    zero_factory: Box<dyn Fn(&IntegerType) -> LLVMValueRef>,
     _phantom: PhantomData<&'static Context>,
 }
 
@@ -21,26 +17,15 @@ impl Type for IntegerType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        // SAFETY: zero_factory must always return a valid pointer
-        Some(unsafe { ConstValue::new((self.zero_factory)(self)) })
-    }
 }
 
 impl IntegerType {
-    pub fn new(
-        factory: unsafe extern "C" fn(LLVMContextRef) -> LLVMTypeRef,
-        // This takes &IntegerType instead of LLVMTypeRef, so that we don't need to do weird dances
-        // to make the closure unsafe
-        zero_factory: impl Fn(&Self) -> LLVMValueRef + 'static,
-    ) -> Self {
+    pub fn new(factory: unsafe extern "C" fn(LLVMContextRef) -> LLVMTypeRef) -> Self {
         Self {
             // SAFETY: The factory functions create types that only depend on the context, and we
             // keep a PhantomData reference to the context, so it won't be destroyed before the
             // types get dropped
             reference: LLVM_CONTEXT.with(|context| unsafe { factory(context.as_llvm_ref()) }),
-            zero_factory: Box::new(zero_factory),
             _phantom: PhantomData,
         }
     }
@@ -53,9 +38,6 @@ macro_rules! declare_integer_type {
                 static [<U $bitcount _ID>]:IntegerType
                     = IntegerType::new(
                         llvm_sys::core::[<LLVMInt $bitcount TypeInContext>],
-                        // SAFETY: We know the passed type is correct
-                        |x| unsafe { LLVMConstInt(x.as_llvm_ref(), 0, 0) }
-
                     );
             }
 
@@ -64,10 +46,6 @@ macro_rules! declare_integer_type {
             impl Type for [<U $bitcount>] {
                 fn as_llvm_ref(&self) -> LLVMTypeRef {
                     [<U $bitcount _ID>].with(super::Type::as_llvm_ref)
-                }
-
-                fn const_uninitialized(&self) -> Option<ConstValue> {
-                    [<U $bitcount _ID>].with(super::Type::const_uninitialized)
                 }
             }
 

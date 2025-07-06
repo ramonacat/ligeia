@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use llvm_sys::{
-    core::{LLVMConstPointerNull, LLVMPointerTypeInContext},
+    core::{LLVMConstNull, LLVMPointerTypeInContext},
     prelude::LLVMTypeRef,
 };
 
@@ -35,11 +35,6 @@ impl Type for PointerType {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        // SAFETY: The reference to the type is valid, so it's all chill.
-        Some(unsafe { ConstValue::new(LLVMConstPointerNull(self.reference)) })
-    }
 }
 
 thread_local! {
@@ -48,12 +43,19 @@ thread_local! {
 
 pub struct Pointer;
 
+impl Pointer {
+    #[must_use]
+    pub fn const_null() -> ConstValue {
+        // SAFETY: The type reference is definitely a valid pointer
+        let result = POINTER.with(|r#type| unsafe { LLVMConstNull(r#type.as_llvm_ref()) });
+
+        // SAFETY: We just created the value
+        unsafe { ConstValue::new(result) }
+    }
+}
+
 impl Type for Pointer {
     fn as_llvm_ref(&self) -> llvm_sys::prelude::LLVMTypeRef {
         POINTER.with(super::Type::as_llvm_ref)
-    }
-
-    fn const_uninitialized(&self) -> Option<ConstValue> {
-        POINTER.with(super::Type::const_uninitialized)
     }
 }

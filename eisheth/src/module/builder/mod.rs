@@ -8,7 +8,7 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMDumpModule,
+        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMDumpModule, LLVMGetUndef,
         LLVMModuleCreateWithNameInContext, LLVMSetInitializer, LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
@@ -26,7 +26,7 @@ use crate::{
     module::builder::global_initializers::{GLOBAL_INITIALIZERS_ENTRY_TYPE, InitializersEntryType},
     package::context::PackageContext,
     types::{self, Type},
-    value::{ConstValue, Value as _},
+    value::{ConstValue, Value},
 };
 
 thread_local! {
@@ -275,14 +275,23 @@ impl ModuleBuilder {
 
     /// # Panics
     /// This function can panic if the `name` cannot be converted into a `CString`
-    pub fn define_global(&self, name: &str, r#type: &dyn Type, value: &ConstValue) -> ConstValue {
+    pub fn define_global(
+        &self,
+        name: &str,
+        r#type: &dyn Type,
+        value: Option<&ConstValue>,
+    ) -> ConstValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: the module reference, type and name are all valid pointers for the duration of
         // the call
         let global = unsafe { LLVMAddGlobal(self.reference, r#type.as_llvm_ref(), name.as_ptr()) };
-
         // SAFETY: We just created the global, and the value must be correct
-        unsafe { LLVMSetInitializer(global, value.as_llvm_ref()) };
+        unsafe {
+            LLVMSetInitializer(
+                global,
+                value.map_or_else(|| LLVMGetUndef(r#type.as_llvm_ref()), Value::as_llvm_ref),
+            );
+        };
 
         // SAFETY: We just created the global, and it will not ever be destroyed
         unsafe { ConstValue::new(global) }
@@ -309,7 +318,7 @@ impl ModuleBuilder {
             self.define_global(
                 "llvm.global_ctors",
                 &initializers_array_type,
-                &initializers_array_type.const_values(&initializer_values),
+                Some(&initializers_array_type.const_values(&initializer_values)),
             )
         });
 

@@ -5,7 +5,7 @@ use eisheth::{
     function::declaration::{FunctionDeclarationDescriptor, Visibility},
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
-    types::{self, Type},
+    types::{self},
 };
 
 use crate::value::ffi::Value;
@@ -37,13 +37,10 @@ fn main() {
     let vector_definition_in_main = value_vector_definition.import_into(main_module);
     let value_definition_in_main = value_definition.import_into(main_module);
 
-    let types = main_module.define_global(
-        "types",
-        &vector_definition_in_main,
-        &vector_definition_in_main.const_uninitialized().unwrap(),
-    );
+    let types = main_module.define_global("types", &vector_definition_in_main, None);
 
-    let test_type = main_module.define_global("type", &types::U64, &types::U64::const_value(1));
+    let test_type =
+        main_module.define_global("type", &types::U64, Some(&types::U64::const_value(1)));
 
     main_module.define_global_initializer("types", |function| {
         let entry = function.create_block("entry");
