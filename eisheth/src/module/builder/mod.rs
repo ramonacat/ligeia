@@ -1,8 +1,9 @@
-use crate::types::RepresentedAs;
+use crate::{global_symbol::GlobalSymbol, types::RepresentedAs};
 mod global_initializers;
 
 use std::{
-    collections::HashMap, error::Error, ffi::CString, fmt::Display, rc::Rc, str::FromStr as _,
+    collections::HashMap, error::Error, ffi::CString, fmt::Display, hash::Hash, rc::Rc,
+    str::FromStr as _,
 };
 
 use llvm_sys::{
@@ -60,6 +61,9 @@ pub enum FunctionImportError {
     DefinedInThisModule(DeclaredFunctionDescriptor),
 }
 
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
+pub struct GlobalId(ModuleId, GlobalSymbol);
+
 struct GlobalInitializerDescriptor {
     priority: u32,
     function: DeclaredFunctionDescriptor,
@@ -73,6 +77,7 @@ pub struct ModuleBuilder {
     functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
     global_initializers: Vec<GlobalInitializerDescriptor>,
     global_mappings: HashMap<String, usize>,
+    globals: HashMap<GlobalId, LLVMValueRef>,
 }
 
 impl ModuleBuilder {
@@ -96,6 +101,7 @@ impl ModuleBuilder {
             functions: HashMap::new(),
             global_initializers: vec![],
             global_mappings: HashMap::new(),
+            globals: HashMap::new(),
         }
     }
 
@@ -289,11 +295,13 @@ impl ModuleBuilder {
     /// # Panics
     /// This function can panic if the `name` cannot be converted into a `CString`
     pub fn define_global(
-        &self,
+        &mut self,
         name: &str,
         r#type: &dyn Type,
         value: Option<&ConstValue>,
-    ) -> ConstValue {
+    ) -> GlobalId {
+        let id = GlobalId(self.id, self.symbols.intern(name));
+
         let name = CString::from_str(name).unwrap();
         // SAFETY: the module reference, type and name are all valid pointers for the duration of
         // the call
@@ -306,11 +314,12 @@ impl ModuleBuilder {
             );
         };
 
-        // SAFETY: We just created the global, and it will not ever be destroyed
-        unsafe { ConstValue::new(global) }
+        self.globals.insert(id, global);
+
+        id
     }
 
-    fn build_global_initializers(&self) {
+    fn build_global_initializers(&mut self) {
         if self.global_initializers.is_empty() {
             return;
         }
@@ -339,7 +348,22 @@ impl ModuleBuilder {
         });
 
         // SAFETY: The global was just crated, it's valid
-        unsafe { LLVMSetLinkage(global.as_llvm_ref(), LLVMLinkage::LLVMAppendingLinkage) };
+        unsafe {
+            LLVMSetLinkage(
+                *self.globals.get(&global).unwrap(),
+                LLVMLinkage::LLVMAppendingLinkage,
+            );
+        };
+    }
+
+    /// # Panics
+    /// If the provided ID is invalid. This most likely means a bug, since globals cannot be in any
+    /// way removed.
+    pub fn get_global(&self, id: GlobalId) -> ConstValue {
+        let result = *self.globals.get(&id).unwrap();
+
+        // SAFETY: the global is connected to the current module, so it is valid
+        unsafe { ConstValue::new(result) }
     }
 }
 

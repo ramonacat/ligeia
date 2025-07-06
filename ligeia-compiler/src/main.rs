@@ -41,9 +41,11 @@ fn main() {
     let value_definition_in_main = value_definition.import_into(main_module);
 
     let types = main_module.define_global("types", &vector_definition_in_main, None);
+    let types = main_module.get_global(types);
 
     let type_value: ConstValue = 1u64.into();
     let test_type = main_module.define_global("type", &u64::representation(), Some(&type_value));
+    let test_type = main_module.get_global(test_type);
 
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {

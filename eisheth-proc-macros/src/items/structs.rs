@@ -58,7 +58,6 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #item
 
         impl #impl_generics #name #ty_generics #where_clause {
-            // TODO should we instead generate #nameType<T> so there's at least some type-checking?
             #visibility fn with_type<TReturn>(callback: impl FnOnce(&::eisheth::types::Struct) -> TReturn) -> TReturn {
                 __ffi_impl:: #type_static_name .with(callback)
             }
