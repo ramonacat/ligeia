@@ -29,13 +29,6 @@ pub fn ffi_enum_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
     quote! {
         #item
 
-        // TODO can we blanket implement Type for all RepresentedAs?
-        impl ::eisheth::types::Type for #name {
-            fn as_llvm_ref(&self) -> ::eisheth::llvm_sys::prelude::LLVMTypeRef {
-                <Self as ::eisheth::types::RepresentedAs>::representation().as_llvm_ref()
-            }
-        }
-
         impl ::eisheth::types::RepresentedAs for #name {
             type RepresentationType = <#repr_value as ::eisheth::types::RepresentedAs>::RepresentationType;
 

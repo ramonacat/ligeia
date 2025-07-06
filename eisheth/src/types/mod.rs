@@ -22,3 +22,9 @@ pub trait RepresentedAs {
 pub trait Type {
     fn as_llvm_ref(&self) -> LLVMTypeRef;
 }
+
+impl<T: RepresentedAs<RepresentationType = TRepresentation>, TRepresentation: Type> Type for T {
+    fn as_llvm_ref(&self) -> LLVMTypeRef {
+        T::representation().as_llvm_ref()
+    }
+}

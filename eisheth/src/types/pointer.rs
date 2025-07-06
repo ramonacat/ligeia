@@ -59,12 +59,6 @@ impl<T> RepresentedAs for *mut T {
     }
 }
 
-impl<T> Type for *mut T {
-    fn as_llvm_ref(&self) -> LLVMTypeRef {
-        <Self as RepresentedAs>::representation().as_llvm_ref()
-    }
-}
-
 impl<T> From<*mut T> for ConstValue {
     fn from(value: *mut T) -> Self {
         // SAFETY: the type pointer is valid
@@ -87,12 +81,6 @@ impl<T> RepresentedAs for *const T {
 
     fn representation() -> Self::RepresentationType {
         POINTER.with(|x| *x)
-    }
-}
-
-impl<T> Type for *const T {
-    fn as_llvm_ref(&self) -> LLVMTypeRef {
-        <Self as RepresentedAs>::representation().as_llvm_ref()
     }
 }
 
