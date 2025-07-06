@@ -1,4 +1,4 @@
-use eisheth::types::RepresentedAs;
+use eisheth::{types::RepresentedAs, value::ConstValue};
 mod ffi;
 
 use std::{marker::PhantomData, mem::MaybeUninit};
@@ -42,10 +42,10 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .unwrap()
                 });
 
-                // TODO impl Into<ConstValue> for u*?
+                let length:ConstValue = 1u64.into();
                 let memory = i.malloc_array(
                     element_type,
-                    &u64::representation().const_value(1),
+                    &length,
                     "memory",
                 );
                 i.store(&memory_pointer, &memory);
@@ -55,7 +55,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .get_field_pointer(&i, &vector, 1, "capacity_pointer")
                         .unwrap()
                 });
-                let capacity = u32::representation().const_value(1);
+                let capacity:ConstValue = 1u32.into();
                 i.store(&capacity_pointer, &capacity);
 
                 let length_pointer = Vector::<T>::with_type(|r#type| {
@@ -63,7 +63,7 @@ pub fn define<T>(package_builder: &mut PackageBuilder, element_type: &dyn Type) 
                         .get_field_pointer(&i, &vector, 2, "length_pointer")
                         .unwrap()
                 });
-                let length = u32::representation().const_value(0);
+                let length:ConstValue = 0u32.into();
                 i.store(&length_pointer, &length);
 
                 i.r#return(None)

@@ -1,4 +1,3 @@
-use crate::types::RepresentedAs;
 mod global_initializers;
 
 use std::{
@@ -330,7 +329,7 @@ impl ModuleBuilder {
                 })
                 .map(|x| {
                     InitializersEntryType::const_values(
-                        &u32::representation().const_value(x.0),
+                        &x.0.into(),
                         &x.1,
                         x.2,
                     )

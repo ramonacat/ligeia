@@ -62,6 +62,12 @@ macro_rules! declare_integer_type {
                     [<U $bitcount _ID>].with(super::Type::as_llvm_ref)
                 }
             }
+
+            impl From<[<u $bitcount>]> for ConstValue {
+                fn from(value: [<u $bitcount>]) -> Self {
+                    [<U $bitcount _ID>].with(|x| x.const_value(value))
+                }
+            }
         }
     };
 }
