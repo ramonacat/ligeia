@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Ident, Type};
 
-pub fn rust_to_eisheth_type(r#type: &Type, with_super: bool) -> TokenStream {
+pub fn rust_type_to_eisheth_type_instance(r#type: &Type, with_super: bool) -> TokenStream {
     match r#type {
         Type::Array(_) => todo!("Array"),
         Type::BareFn(_) => todo!("BareFn"),
@@ -16,7 +16,7 @@ pub fn rust_to_eisheth_type(r#type: &Type, with_super: bool) -> TokenStream {
             if path.qself.is_some() {
                 todo!("path.qself");
             } else if let Some(ident) = path.path.get_ident() {
-                ident_to_type(ident, with_super)
+                ident_to_type_instance(ident, with_super)
             } else {
                 todo!("path multiple idents");
             }
@@ -33,20 +33,17 @@ pub fn rust_to_eisheth_type(r#type: &Type, with_super: bool) -> TokenStream {
     }
 }
 
-pub fn ident_to_type(ident: &Ident, with_super: bool) -> proc_macro2::TokenStream {
-    match ident.to_string().as_str() {
-        "u8" => quote! { ::eisheth::types::U8 },
-        "u16" => quote! { ::eisheth::types::U16 },
-        "u32" => quote! { ::eisheth::types::U32 },
-        "u64" => quote! { ::eisheth::types::U64 },
-        _ => {
-            let qualifier = if with_super {
-                Some(quote! {super::})
-            } else {
-                None
-            };
-            // TODO can we just do this for all the types?
-            quote! { < #qualifier #ident as ::eisheth::types::RepresentedAs >::REPRESENTATION }
-        }
-    }
+pub fn ident_to_type_instance(ident: &Ident, with_super: bool) -> proc_macro2::TokenStream {
+    let qualifier = if with_super
+        && (
+            // TODO can we check if the ident is for a builtin type somehow, instead of this series of
+            // comparisons?
+            ident != "u8" && ident != "u16" && ident != "u32" && ident != "u64"
+        ) {
+        Some(quote! {super::})
+    } else {
+        None
+    };
+
+    quote! { < #qualifier #ident as ::eisheth::types::RepresentedAs >::representation() }
 }

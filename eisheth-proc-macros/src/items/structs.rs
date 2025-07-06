@@ -4,7 +4,7 @@ use syn::{Fields, Ident, ItemStruct, parse_macro_input};
 
 use crate::{
     convert_case::{pascal_to_lower_snake, pascal_to_upper_snake},
-    types::rust_to_eisheth_type,
+    types::rust_type_to_eisheth_type_instance,
 };
 
 /// # Panics
@@ -42,7 +42,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let field_types: Vec<_> = declaration_fields
         .iter()
-        .map(|x| rust_to_eisheth_type(x.2, true))
+        .map(|x| rust_type_to_eisheth_type_instance(x.2, true))
         .map(|x| quote! { ::std::boxed::Box::new(#x) })
         .collect();
 

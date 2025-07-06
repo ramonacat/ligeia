@@ -1,3 +1,4 @@
+use eisheth::types::RepresentedAs;
 mod value;
 mod vector;
 
@@ -17,13 +18,13 @@ fn main() {
     let side = side_module.define_function(
         &FunctionDeclarationDescriptor::new(
             "side_fn",
-            types::Function::new(&types::U64, &[]),
+            types::Function::new(&u64::representation(), &[]),
             Visibility::Export,
         ),
         |function| {
             let block = function.create_block("entry");
 
-            block.build(|i| i.r#return(Some(&types::U64::const_value(7))));
+            block.build(|i| i.r#return(Some(&u64::representation().const_value(7))));
         },
     );
 
@@ -39,8 +40,11 @@ fn main() {
 
     let types = main_module.define_global("types", &vector_definition_in_main, None);
 
-    let test_type =
-        main_module.define_global("type", &types::U64, Some(&types::U64::const_value(1)));
+    let test_type = main_module.define_global(
+        "type",
+        &u64::representation(),
+        Some(&u64::representation().const_value(1)),
+    );
 
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {
@@ -59,15 +63,15 @@ fn main() {
     let other = main_module.define_function(
         &FunctionDeclarationDescriptor::new(
             "other",
-            types::Function::new(&types::U64, &[&types::U64]),
+            types::Function::new(&u64::representation(), &[&u64::representation()]),
             Visibility::Internal,
         ),
         |function| {
             let block = function.create_block("entry");
 
             block.build(|i| {
-                let left = types::U64::const_value(2);
-                let right = types::U64::const_value(11);
+                let left = u64::representation().const_value(2);
+                let right = u64::representation().const_value(11);
                 let sum = i.add(&left, &right, "sum");
 
                 i.r#return(Some(&sum))
@@ -77,17 +81,20 @@ fn main() {
     let main_function = main_module.define_function(
         &FunctionDeclarationDescriptor::new(
             "main",
-            types::Function::new(&types::U64, &[&types::U64]),
+            types::Function::new(&u64::representation(), &[&u64::representation()]),
             Visibility::Export,
         ),
         move |function| {
             let entry = function.create_block("entry");
 
             entry.build(|i| {
-                let base = types::U64::const_value(32);
+                let base = u64::representation().const_value(32);
                 let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
-                let value_from_other =
-                    i.direct_call(other, &[&types::U64::const_value(2)], "calling_other");
+                let value_from_other = i.direct_call(
+                    other,
+                    &[&u64::representation().const_value(2)],
+                    "calling_other",
+                );
                 let sum2 = i.add(&sum, &value_from_other, "add_again");
                 let value_from_side = i.direct_call(side, &[], "cross_module");
                 let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");

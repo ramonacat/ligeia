@@ -5,7 +5,7 @@ use llvm_sys::{
 
 use crate::{
     context::LLVM_CONTEXT,
-    types::{self, Type},
+    types::{self, RepresentedAs, Type},
     value::{ConstValue, Value},
 };
 
@@ -18,7 +18,7 @@ pub(super) struct InitializersEntryType(LLVMTypeRef);
 impl InitializersEntryType {
     fn new() -> Self {
         let mut initializer_element_types = vec![
-            types::U32.as_llvm_ref(),
+            u32::representation().as_llvm_ref(),
             types::Pointer.as_llvm_ref(),
             types::Pointer.as_llvm_ref(),
         ];

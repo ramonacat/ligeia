@@ -12,8 +12,8 @@ use super::Type;
 use crate::{
     context::{Context, LLVM_CONTEXT},
     function::instruction_builder::InstructionBuilder,
-    types::{self, ConstValue},
-    value::{DynamicValue, Value},
+    types::RepresentedAs,
+    value::{ConstValue, DynamicValue, Value},
 };
 
 pub struct Struct {
@@ -89,8 +89,10 @@ impl Struct {
         let name = CString::new(name).unwrap();
 
         let mut indices = vec![
-            types::U32::const_value(0).as_llvm_ref(),
-            types::U32::const_value(index.try_into().unwrap()).as_llvm_ref(),
+            u32::representation().const_value(0).as_llvm_ref(),
+            u32::representation()
+                .const_value(index.try_into().unwrap())
+                .as_llvm_ref(),
         ];
 
         // SAFETY: We have a valid builder, valid type reference, a valid pointer, valid name and

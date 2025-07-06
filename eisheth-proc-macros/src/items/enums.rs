@@ -2,8 +2,6 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Ident, ItemEnum, parse_macro_input};
 
-use crate::types::ident_to_type;
-
 pub fn ffi_enum_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as ItemEnum);
 
@@ -27,20 +25,23 @@ pub fn ffi_enum_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         .expect("To be FFI-compatible, the enum must have a #[repr()] that is an integer type");
 
     let name = &item.ident;
-    let r#type = ident_to_type(&repr_value, false);
 
     quote! {
         #item
 
+        // TODO can we blanket implement Type for all RepresentedAs?
         impl ::eisheth::types::Type for #name {
             fn as_llvm_ref(&self) -> ::eisheth::llvm_sys::prelude::LLVMTypeRef {
-                #r#type.as_llvm_ref()
+                <Self as ::eisheth::types::RepresentedAs>::representation().as_llvm_ref()
             }
         }
 
         impl ::eisheth::types::RepresentedAs for #name {
-            type RepresentationType = #r#type;
-            const REPRESENTATION: Self::RepresentationType = #r#type;
+            type RepresentationType = <#repr_value as ::eisheth::types::RepresentedAs>::RepresentationType;
+
+            fn representation() -> <#repr_value as ::eisheth::types::RepresentedAs>::RepresentationType {
+                <#repr_value as ::eisheth::types::RepresentedAs>::representation()
+            }
         }
     }
     .into()

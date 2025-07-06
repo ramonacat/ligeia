@@ -41,6 +41,7 @@ thread_local! {
     static POINTER:PointerType = PointerType::new();
 }
 
+// TODO can we instead impelement RepresentedAs for *mut T and *const T?
 pub struct Pointer;
 
 impl Pointer {

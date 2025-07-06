@@ -1,3 +1,4 @@
+use crate::types::RepresentedAs;
 mod global_initializers;
 
 use std::{
@@ -329,7 +330,11 @@ impl ModuleBuilder {
                 })
                 .map(|x| {
                     // TODO expose the priority and initialized_value so the user can pass them
-                    InitializersEntryType::const_values(&types::U32::const_value(x.0), &x.1, x.2)
+                    InitializersEntryType::const_values(
+                        &u32::representation().const_value(x.0),
+                        &x.1,
+                        x.2,
+                    )
                 })
                 .collect();
 
