@@ -1,4 +1,5 @@
 #[macro_export]
+#[expandable::item]
 macro_rules! define_function_caller {
     (
         $name:ident,
@@ -51,11 +52,20 @@ macro_rules! define_function_caller {
 }
 
 #[macro_export]
+#[expandable::stmt]
 macro_rules! define_function {
-    ($module:expr, $name:ident, (runtime $(($($argument_name:ident : $argument_type:ty),*))?)) => {
+    (
+        $module:expr,
+        $name:ident,
+        (runtime $(($($argument_name:ident : $argument_type:ty),*))?)
+    ) => {
         ::eisheth::define_function!($module, $name, (runtime $(($($argument_name : $argument_type),*))? -> ()))
     };
-    ($module:expr, $name:ident, (runtime $(($($argument_name:ident : $argument_type:ty),*))? -> $return_type:ty)) => {
+    (
+        $module:expr,
+        $name:ident,
+        (runtime $(($($argument_name:ident : $argument_type:ty),*))? -> $return_type:ty)
+    ) => {
         // SAFETY: Signatures of the functions match
         let $name = unsafe {
             $module.define_runtime_function(
@@ -75,6 +85,7 @@ macro_rules! define_function {
 }
 
 #[macro_export]
+#[expandable::item]
 macro_rules! define_module {
     (module $name:ident {
         $( $function_name:ident : $function_contents:tt; )*
@@ -84,7 +95,10 @@ macro_rules! define_module {
         }
 
         impl Definition {
-            pub fn import_into(&self, module: &mut ::eisheth::module::builder::ModuleBuilder) -> ImportedDefinition {
+            pub fn import_into(
+                &self,
+                module: &mut ::eisheth::module::builder::ModuleBuilder
+            ) -> ImportedDefinition {
                 $(
                     let $function_name = module.import_function(self.$function_name).unwrap();
                 )*
