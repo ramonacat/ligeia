@@ -1,4 +1,5 @@
 #[macro_export]
+#[expandable::item]
 macro_rules! define_function_caller {
     (
         $name:ident,
@@ -51,6 +52,7 @@ macro_rules! define_function_caller {
 }
 
 #[macro_export]
+#[expandable::stmt]
 macro_rules! define_function {
     (
         $module:expr,
@@ -83,6 +85,7 @@ macro_rules! define_function {
 }
 
 #[macro_export]
+#[expandable::item]
 macro_rules! define_module {
     (module $name:ident {
         $( $function_name:ident : $function_contents:tt; )*
