@@ -24,10 +24,17 @@ pub fn rust_type_to_eisheth_type_instance(r#type: &Type) -> TokenStream {
         Type::Ptr(target) => {
             let r#mut = target.mutability;
             let r#const = target.const_token;
+            let target_type = &target.elem;
+            let target_type = quote! {
+                <#target_type as ::eisheth::types::RepresentedAs>::RepresentationType
+            };
 
-            // TODO: This is hacky and will break if we introduce pointer types that carry value
-            // types
-            quote! { <* #r#mut #r#const u8 as ::eisheth::types::RepresentedAs>::representation() }
+            quote! {
+                <*
+                    #r#mut #r#const #target_type
+                    as ::eisheth::types::RepresentedAs
+                >::representation()
+            }
         }
         Type::Reference(_) => todo!("Reference"),
         Type::Slice(_) => todo!("Slice"),

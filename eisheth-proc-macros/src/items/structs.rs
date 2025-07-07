@@ -59,25 +59,21 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
         impl #impl_generics #name #ty_generics #where_clause {
             #visibility fn with_type<TReturn>(callback: impl FnOnce(&::eisheth::types::Struct) -> TReturn) -> TReturn {
-                __ffi_impl:: #type_static_name .with(callback)
+                thread_local! {
+                    static #type_static_name : ::eisheth::types::Struct =
+                        ::eisheth::types::Struct::new(
+                            #ffi_name,
+                            &[
+                                #(#field_types),*
+                            ]
+                        );
+                }
+
+                #type_static_name.with(callback)
             }
         }
 
         #representation
-
-        mod __ffi_impl {
-            use super::*;
-
-            thread_local! {
-                pub static #type_static_name : ::eisheth::types::Struct =
-                    ::eisheth::types::Struct::new(
-                        #ffi_name,
-                        &[
-                            #(#field_types),*
-                        ]
-                    );
-            }
-        }
     }
     .into()
 }
