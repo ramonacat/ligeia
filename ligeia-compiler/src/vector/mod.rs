@@ -111,7 +111,6 @@ impl ImportedDefinition {
         let _ = i.direct_call(self.initializer, &[pointer], "");
     }
 
-    #[allow(unused)]
     pub(crate) fn push_uninitialized(
         &self,
         i: &InstructionBuilder,
