@@ -1,37 +1,53 @@
 #[macro_export]
 macro_rules! define_function_caller {
-    ($name:ident, (runtime $(($($argument_name:ident : $argument_type:ty),*))?)) => {
+    (
+        $name:ident,
+        (runtime $(($($argument_name:ident : $argument_type:ty),*))?)
+    ) => {
+        ::eisheth::define_function_caller!(
+            @__impl $name,
+            (runtime $(($($argument_name : $argument_type),*))? -> ()),
+            _,
+            "",
+        );
+    };
+    (
+        $name:ident,
+        (runtime $(($($argument_name:ident : $argument_type:ty),*))? -> $return_type:ty)
+    ) => {
+        ::eisheth::define_function_caller!(
+            @__impl $name,
+            (runtime $(($($argument_name : $argument_type),*))? -> ::eisheth::value::DynamicValue),
+            result,
+            stringify!($name),
+            result
+        );
+    };
+    (
+        @__impl $name:ident,
+        (runtime $(($($argument_name:ident : $argument_type:ty),*))? -> $return_type:ty),
+        $let_name:expr,
+        $binding_name:expr,
+        $($return_statement:expr)?
+    ) => {
         paste::paste! {
             pub fn $name<$($([<T $argument_name>]),*)?>(
                 &self,
                 i: &::eisheth::function::instruction_builder::InstructionBuilder,
                 $($($argument_name : [<T $argument_name>]),*)?
-            )
+            ) -> $return_type
                 $(where $(::eisheth::value::ConstOrDynamicValue: From<[<T $argument_name>]>),* )?
             {
-                let _ = i.direct_call(
+                let $let_name = i.direct_call(
                     self. $name,
-                    &[$($($argument_name .into()),*)?], ""
+                    &[$($($argument_name .into()),*)?],
+                    $binding_name
                 );
+
+                $($return_statement)?
             }
         }
     };
-    ($name:ident, (runtime $(($($argument_name:ident : $argument_type:ty),*))? -> $return_type:ty)) => {
-        paste::paste! {
-            pub fn $name<$($([<T $argument_name>]),*)?>(
-                &self,
-                i: &::eisheth::function::instruction_builder::InstructionBuilder,
-                $($($argument_name : [<T $argument_name>]),*)?
-            ) -> ::eisheth::value::DynamicValue
-                $(where $(::eisheth::value::ConstOrDynamicValue: From<[<T $argument_name>]>),* )?
-            {
-                i.direct_call(
-                    self. $name,
-                    &[$($($argument_name .into()),*)?], stringify!($name)
-                )
-            }
-        }
-    }
 }
 
 #[macro_export]
