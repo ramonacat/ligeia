@@ -10,11 +10,8 @@ pub fn ffi_enum_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         if attr.path().is_ident("repr") {
             let received_repr_value = attr.parse_args::<Ident>().unwrap();
 
-            // TODO signed ok too?
-            if received_repr_value == "u8"
-                || received_repr_value == "u16"
-                || received_repr_value == "u32"
-                || received_repr_value == "u64"
+            if ["u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64"]
+                .contains(&(received_repr_value.to_string().as_str()))
             {
                 repr_value = Some(received_repr_value);
             }
