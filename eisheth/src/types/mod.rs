@@ -8,7 +8,10 @@ pub mod void;
 pub use array::Array;
 pub use function::Function;
 pub use integer::Integer;
-use llvm_sys::{core::LLVMSizeOf, prelude::LLVMTypeRef};
+use llvm_sys::{
+    core::{LLVMConstBitCast, LLVMSizeOf},
+    prelude::LLVMTypeRef,
+};
 pub use pointer::Pointer;
 pub use r#struct::Struct;
 
@@ -38,6 +41,9 @@ impl<T: Type + ?Sized> TypeExtensions for T {
     fn sizeof(&self) -> ConstValue {
         // SAFETY: The type reference comes from a valid wrapper
         let result = unsafe { LLVMSizeOf(self.as_llvm_ref()) };
+
+        // SAFETY: The type reference is from a safe wrapper, so it's valid
+        let result = unsafe { LLVMConstBitCast(result, u64::representation().as_llvm_ref()) };
 
         // SAFETY: We just created the result, it is a valid pointer
         unsafe { ConstValue::new(result) }

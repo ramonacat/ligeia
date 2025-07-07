@@ -1,4 +1,4 @@
-use eisheth::types::RepresentedAs;
+use eisheth::types::{RepresentedAs, TypeExtensions};
 mod value;
 mod vector;
 
@@ -31,8 +31,7 @@ fn main() {
     );
 
     let value_definition = value::define(&mut package_builder);
-    let value_vector_definition =
-        Value::with_type(|r#type| vector::define(&mut package_builder, r#type));
+    let value_vector_definition = vector::define(&mut package_builder);
 
     let main_module = package_builder.add_module("main").unwrap();
 
@@ -51,7 +50,9 @@ fn main() {
     main_module.define_global_initializer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            vector_definition_in_main.initialize(&i, &types);
+            Value::with_type(|r#type| {
+                vector_definition_in_main.initialize(&i, &types, &r#type.sizeof());
+            });
 
             let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
             value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);

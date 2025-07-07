@@ -1,7 +1,4 @@
-use eisheth::{
-    types::{RepresentedAs, TypeExtensions},
-    value::ConstValue,
-};
+use eisheth::types::RepresentedAs;
 mod ffi;
 
 use eisheth::{
@@ -17,50 +14,25 @@ use eisheth::{
 
 use crate::vector::ffi::Vector;
 
-// TODO we should also allow for defining a vector of Opaque type, where only the FFI-side code
-// undrerstands the type inside
 // TODO add some debug_print method, that prints the contents of the vector
-pub fn define(package_builder: &mut PackageBuilder, element_type: &dyn Type) -> Definition {
+// TODO add a destructor
+pub fn define(package_builder: &mut PackageBuilder) -> Definition {
     let module = package_builder.add_module("vector").unwrap();
 
     // SAFETY: Signatures of the functions match
-    let initializer_inner = unsafe {
+    let initializer = unsafe {
         module.define_runtime_function(
             &FunctionSignature::new(
-                "vector_initializer_inner",
-                types::Function::new(&<()>::representation(), &[&<*mut Vector>::representation()]),
-                Visibility::Internal,
+                "vector_initializer",
+                types::Function::new(
+                    &<()>::representation(),
+                    &[&<*mut Vector>::representation(), &<u64>::representation()],
+                ),
+                Visibility::Export,
             ),
-            runtime::initializer as unsafe extern "C" fn(*mut Vector) as usize,
+            runtime::initializer as unsafe extern "C" fn(*mut Vector, u64) as usize,
         )
     };
-
-    let initializer = module.define_function(
-        &FunctionSignature::new(
-            "vector_initializer",
-            types::Function::new(&<()>::representation(), &[&<*mut Vector>::representation()]),
-            Visibility::Export,
-        ),
-        |f| {
-            let entry = f.create_block("entry");
-
-            let vector = f.get_argument(0).unwrap();
-
-            entry.build(|i| {
-                let element_size_pointer = Vector::with_type(|r#type| {
-                    r#type
-                        .get_field_pointer(&i, &vector, 3, "element_size_pointer")
-                        .unwrap()
-                });
-                let element_size: ConstValue = element_type.sizeof();
-                i.store(&element_size_pointer, &element_size);
-
-                let _ = i.direct_call(initializer_inner, &[&vector], "");
-
-                i.r#return(None)
-            });
-        },
-    );
 
     // SAFETY: The signature of the rust-side function matches the one in the FFI-side declaration
     let push_uninitialized = unsafe {
@@ -107,8 +79,13 @@ pub struct ImportedDefinition {
 }
 
 impl ImportedDefinition {
-    pub(crate) fn initialize(&self, i: &InstructionBuilder, pointer: &dyn eisheth::value::Value) {
-        let _ = i.direct_call(self.initializer, &[pointer], "");
+    pub(crate) fn initialize(
+        &self,
+        i: &InstructionBuilder,
+        pointer: &dyn eisheth::value::Value,
+        element_size: &dyn eisheth::value::Value,
+    ) {
+        let _ = i.direct_call(self.initializer, &[pointer, element_size], "");
     }
 
     pub(crate) fn push_uninitialized(
@@ -129,8 +106,8 @@ impl Type for ImportedDefinition {
 mod runtime {
     use crate::vector::ffi::Vector;
 
-    pub(super) unsafe extern "C" fn initializer(pointer: *mut Vector) {
-        Vector::initialize(pointer);
+    pub(super) unsafe extern "C" fn initializer(pointer: *mut Vector, element_size: u64) {
+        Vector::initialize(pointer, element_size);
     }
 
     pub(super) unsafe extern "C" fn push_uninitialized(vector: *mut Vector) -> *mut u8 {

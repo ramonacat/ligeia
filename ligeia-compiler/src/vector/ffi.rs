@@ -11,9 +11,10 @@ pub struct Vector {
 }
 
 impl Vector {
-    pub(crate) fn initialize(value: *mut Self) {
+    pub(crate) fn initialize(value: *mut Self, element_size: u64) {
         // SAFETY: The caller must provide a valid pointer
         let pointer = unsafe { &mut *value };
+        pointer.element_size = u32::try_from(element_size).unwrap();
         // SAFETY: The caller must give us a valid, aligned, non-zero element_size already set
         pointer.data = unsafe { libc::malloc(pointer.element_size as usize) }.cast();
         pointer.length = 0;
