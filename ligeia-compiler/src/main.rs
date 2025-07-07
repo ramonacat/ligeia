@@ -56,6 +56,12 @@ fn main() {
             let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
             value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
 
+            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
+
+            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
+
             i.r#return(None)
         });
     });

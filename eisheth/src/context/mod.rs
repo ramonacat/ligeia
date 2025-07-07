@@ -18,6 +18,7 @@ impl Context {
         // SAFETY: There are no documented global state requirements for this function, nor ways to
         // fail
         let context = unsafe { LLVMContextCreate() };
+
         // SAFETY: The variables we pass will exist for the duration of the program, the
         // DiagnosticContext is allowed to be null
         unsafe {

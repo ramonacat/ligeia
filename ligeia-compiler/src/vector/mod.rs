@@ -1,4 +1,7 @@
-use eisheth::{types::RepresentedAs, value::ConstValue};
+use eisheth::{
+    types::{RepresentedAs, TypeExtensions},
+    value::ConstValue,
+};
 mod ffi;
 
 use eisheth::{
@@ -20,6 +23,18 @@ use crate::vector::ffi::Vector;
 pub fn define(package_builder: &mut PackageBuilder, element_type: &dyn Type) -> Definition {
     let module = package_builder.add_module("vector").unwrap();
 
+    // SAFETY: Signatures of the functions match
+    let initializer_inner = unsafe {
+        module.define_runtime_function(
+            &FunctionSignature::new(
+                "vector_initializer_inner",
+                types::Function::new(&<()>::representation(), &[&<*mut Vector>::representation()]),
+                Visibility::Internal,
+            ),
+            runtime::initializer as unsafe extern "C" fn(*mut Vector) as usize,
+        )
+    };
+
     let initializer = module.define_function(
         &FunctionSignature::new(
             "vector_initializer",
@@ -32,31 +47,15 @@ pub fn define(package_builder: &mut PackageBuilder, element_type: &dyn Type) -> 
             let vector = f.get_argument(0).unwrap();
 
             entry.build(|i| {
-                let memory_pointer = Vector::with_type(|r#type| {
+                let element_size_pointer = Vector::with_type(|r#type| {
                     r#type
-                        .get_field_pointer(&i, &vector, 0, "memory_pointer")
+                        .get_field_pointer(&i, &vector, 3, "element_size_pointer")
                         .unwrap()
                 });
+                let element_size: ConstValue = element_type.sizeof();
+                i.store(&element_size_pointer, &element_size);
 
-                let length: ConstValue = 1u64.into();
-                let memory = i.malloc_array(element_type, &length, "memory");
-                i.store(&memory_pointer, &memory);
-
-                let capacity_pointer = Vector::with_type(|r#type| {
-                    r#type
-                        .get_field_pointer(&i, &vector, 1, "capacity_pointer")
-                        .unwrap()
-                });
-                let capacity: ConstValue = 1u32.into();
-                i.store(&capacity_pointer, &capacity);
-
-                let length_pointer = Vector::with_type(|r#type| {
-                    r#type
-                        .get_field_pointer(&i, &vector, 2, "length_pointer")
-                        .unwrap()
-                });
-                let length: ConstValue = 0u32.into();
-                i.store(&length_pointer, &length);
+                let _ = i.direct_call(initializer_inner, &[&vector], "");
 
                 i.r#return(None)
             });
@@ -131,11 +130,42 @@ impl Type for ImportedDefinition {
 mod runtime {
     use crate::vector::ffi::Vector;
 
-    // TODO: This should do an actual push, i.e. add to length and do a realloc and increase
-    // capacity if needed
+    pub(super) unsafe extern "C" fn initializer(pointer: *mut Vector) {
+        // SAFETY: The caller must provide a valid pointer
+        let pointer = unsafe { &mut *pointer };
+        // SAFETY: The caller must give us a valid, aligned, non-zero element_size already set
+        pointer.data = unsafe { libc::malloc(pointer.element_size as usize) }.cast();
+        pointer.length = 0;
+        pointer.capacity = 1;
+    }
+
     pub(super) unsafe extern "C" fn push_uninitialized(vector: *mut Vector) -> *mut u8 {
-        // SAFETY: It's up to the user to ensure that `vector` is a valid pointer and that they
-        // won't use the returned refernce for longer than the `vector` is valid
-        (unsafe { &*vector }).data
+        // SAFETY: the user must pass a pointer to a valid vector
+        let vector = unsafe { &mut *vector };
+
+        if vector.length + 1 > vector.capacity {
+            // SAFETY: we know the new size is bigger than previous and aligned, because
+            // element_size must be
+            vector.data = unsafe {
+                libc::realloc(
+                    vector.data.cast(),
+                    vector.capacity as usize * vector.element_size as usize * 2usize,
+                )
+            }
+            .cast();
+            assert!(!vector.data.is_null());
+            vector.capacity *= 2;
+        }
+
+        vector.length += 1;
+
+        // SAFETY: We've ensured that there's enough memory for the element_size, and the calleer
+        // expects it to be uninitialized
+        unsafe {
+            vector.data.byte_offset(
+                isize::try_from(vector.length - 1).unwrap()
+                    * isize::try_from(vector.element_size).unwrap(),
+            )
+        }
     }
 }

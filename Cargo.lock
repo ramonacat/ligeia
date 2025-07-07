@@ -69,6 +69,7 @@ name = "ligeia"
 version = "0.1.0"
 dependencies = [
  "eisheth",
+ "libc",
 ]
 
 [[package]]
