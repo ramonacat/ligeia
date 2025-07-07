@@ -12,6 +12,7 @@ use crate::{
     context::diagnostic::DIAGNOSTIC_HANDLER,
     global_symbol::GlobalSymbols,
     module::{
+        AnyModuleExtensions,
         builder::{ModuleBuildError, ModuleBuilder},
         built::LinkError,
     },
@@ -116,6 +117,11 @@ impl PackageBuilder {
             }
         });
 
+        let ir_per_module: HashMap<String, String> = built_modules
+            .iter()
+            .map(|x| (x.name(), x.dump_ir()))
+            .collect();
+
         let mut final_module = built_modules
             .pop()
             .expect("package should contain at least a single module");
@@ -124,6 +130,6 @@ impl PackageBuilder {
             final_module.link(module).map_err(PackageBuildError::Link)?;
         }
 
-        Ok(Package::new(final_module))
+        Ok(Package::new(final_module, ir_per_module))
     }
 }

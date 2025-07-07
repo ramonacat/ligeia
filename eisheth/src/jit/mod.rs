@@ -12,7 +12,7 @@ use std::{
 
 use function::JitFunction;
 use llvm_sys::{
-    core::{LLVMDisposeMessage, LLVMDumpModule, LLVMGetNamedFunction},
+    core::{LLVMDisposeMessage, LLVMGetNamedFunction},
     execution_engine::{
         LLVMAddGlobalMapping, LLVMCreateExecutionEngineForModule, LLVMDisposeExecutionEngine,
         LLVMExecutionEngineRef, LLVMGetFunctionAddress, LLVMLinkInMCJIT, LLVMRunStaticConstructors,
@@ -65,12 +65,6 @@ impl Jit {
         let module = package.into_module();
 
         let (global_mappings, module_reference) = module.take();
-
-        // TODO expose an API so the user can print the IR whatever way they want, instead of
-        // printing here
-        eprintln!("===FINAL LINKED MODULE===");
-        // SAFETY: We just got the module_reference from a safe wrapper, so it must be valid
-        unsafe { LLVMDumpModule(module_reference) };
 
         let execution_engine = {
             let mut engine = MaybeUninit::uninit();

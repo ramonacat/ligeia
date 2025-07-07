@@ -120,6 +120,13 @@ fn main() {
             panic!("Failed to build the modules:\n{errors}");
         }
     };
+
+    for (module_name, raw_ir) in package.ir_per_module() {
+        println!("IR for {module_name}:\n{raw_ir}");
+    }
+
+    println!("Final linked IR:\n{}", package.final_ir());
+
     let jit = Jit::new(package).unwrap();
 
     // SAFETY: The signature matches the signature of the declaration

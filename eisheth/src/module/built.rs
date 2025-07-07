@@ -11,6 +11,7 @@ use crate::{
     context::diagnostic::{DIAGNOSTIC_HANDLER, Diagnostic, DiagnosticHandler},
     function::Function,
     global_symbol::GlobalSymbols,
+    module::AnyModule,
 };
 
 #[derive(Debug)]
@@ -46,6 +47,12 @@ pub struct Module {
     global_mappings: HashMap<String, usize>,
 }
 
+impl AnyModule for Module {
+    fn as_llvm_ref(&self) -> LLVMModuleRef {
+        self.reference
+    }
+}
+
 impl Module {
     pub(crate) const unsafe fn new(
         id: ModuleId,
@@ -61,18 +68,6 @@ impl Module {
             symbols,
             global_mappings,
         }
-    }
-
-    /// # Panics
-    /// If the `FunctionDeclaration` is from another module.
-    #[must_use]
-    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> Function<'_> {
-        assert!(id.module_id == self.id);
-
-        let function = self.functions.get(&id).unwrap();
-
-        // SAFETY: We got a reference to the function in the HashMap, so it must be valid
-        Function::new(self, *function, id.r#type)
     }
 
     pub(crate) fn link(&mut self, mut module: Self) -> Result<(), LinkError> {
@@ -106,6 +101,22 @@ impl Module {
         let module_reference = self.reference;
         self.reference = std::ptr::null_mut();
         (self.global_mappings.drain().collect(), module_reference)
+    }
+
+    /// # Panics
+    /// If the `FunctionDeclaration` is from another module.
+    #[must_use]
+    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> Function<'_> {
+        assert!(id.module_id == self.id);
+
+        let function = self.functions.get(&id).unwrap();
+
+        // SAFETY: We got a reference to the function in the HashMap, so it must be valid
+        Function::new(self, *function, id.r#type)
+    }
+
+    pub(crate) fn name(&self) -> String {
+        self.symbols.resolve(self.id.1)
     }
 }
 

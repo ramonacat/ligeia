@@ -1,6 +1,7 @@
 use crate::{
     context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
     global_symbol::GlobalSymbol,
+    module::{AnyModule, AnyModuleExtensions},
     types::RepresentedAs,
 };
 mod global_initializers;
@@ -14,7 +15,7 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMDumpModule, LLVMGetUndef,
+        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMGetUndef,
         LLVMModuleCreateWithNameInContext, LLVMSetInitializer, LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
@@ -44,6 +45,7 @@ pub struct ModuleBuildError {
     module_name: String,
     message: String,
     diagnostics: Vec<crate::context::diagnostic::Diagnostic>,
+    raw_ir: String,
 }
 
 impl Display for ModuleBuildError {
@@ -57,6 +59,8 @@ impl Display for ModuleBuildError {
         for diagnostic in &self.diagnostics {
             writeln!(f, "{diagnostic}")?;
         }
+
+        writeln!(f, "LLVM IR:\n{}", self.raw_ir)?;
 
         Ok(())
     }
@@ -89,6 +93,12 @@ pub struct ModuleBuilder {
     global_initializers: Vec<GlobalInitializerDescriptor>,
     global_mappings: HashMap<String, usize>,
     globals: HashMap<GlobalId, LLVMValueRef>,
+}
+
+impl AnyModule for ModuleBuilder {
+    fn as_llvm_ref(&self) -> LLVMModuleRef {
+        self.reference
+    }
 }
 
 impl ModuleBuilder {
@@ -240,9 +250,6 @@ impl ModuleBuilder {
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         self.build_global_initializers();
-        // TODO expose an API so the user can do whatever they want with the IR dump
-        // SAFETY: We have a valid, non-null `reference`, so this function can't fail
-        unsafe { LLVMDumpModule(self.reference) };
 
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
@@ -265,10 +272,12 @@ impl ModuleBuilder {
                 .to_string();
 
             let diagnostics = DIAGNOSTIC_HANDLER.with(DiagnosticHandler::take_diagnostics);
+
             return Err(ModuleBuildError {
                 module_name: self.symbols.resolve(self.id.1),
                 message,
                 diagnostics,
+                raw_ir: self.dump_ir(),
             });
         }
 
