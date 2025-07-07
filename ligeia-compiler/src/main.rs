@@ -117,11 +117,7 @@ fn main() {
     let package = match package_builder.build() {
         Ok(package) => package,
         Err(errors) => {
-            for error in errors {
-                eprintln!("{error}");
-            }
-
-            panic!("failed to build modlues");
+            panic!("Failed to build the modules:\n{errors}");
         }
     };
     let jit = Jit::new(package).unwrap();

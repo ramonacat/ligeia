@@ -1,4 +1,8 @@
-use crate::{global_symbol::GlobalSymbol, types::RepresentedAs};
+use crate::{
+    context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
+    global_symbol::GlobalSymbol,
+    types::RepresentedAs,
+};
 mod global_initializers;
 
 use std::{
@@ -39,15 +43,22 @@ thread_local! {
 pub struct ModuleBuildError {
     module_name: String,
     message: String,
+    diagnostics: Vec<crate::context::diagnostic::Diagnostic>,
 }
 
 impl Display for ModuleBuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Failed to build the module \"{}\":\n{}",
-            self.module_name, self.message
-        )
+            "Failed to build the module \"{}\":\n{}\nDiagnosics:\n",
+            self.module_name, self.message,
+        )?;
+
+        for diagnostic in &self.diagnostics {
+            writeln!(f, "{diagnostic}")?;
+        }
+
+        Ok(())
     }
 }
 
@@ -229,7 +240,7 @@ impl ModuleBuilder {
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         self.build_global_initializers();
-        //
+        // TODO expose an API so the user can do whatever they want with the IR dump
         // SAFETY: We have a valid, non-null `reference`, so this function can't fail
         unsafe { LLVMDumpModule(self.reference) };
 
@@ -253,9 +264,11 @@ impl ModuleBuilder {
                 .unwrap()
                 .to_string();
 
+            let diagnostics = DIAGNOSTIC_HANDLER.with(DiagnosticHandler::take_diagnostics);
             return Err(ModuleBuildError {
                 module_name: self.symbols.resolve(self.id.1),
                 message,
+                diagnostics,
             });
         }
 

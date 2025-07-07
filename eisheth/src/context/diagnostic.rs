@@ -1,6 +1,7 @@
 use std::{
     cell::RefCell,
     ffi::{CStr, c_void},
+    fmt::Display,
 };
 
 use llvm_sys::{
@@ -32,11 +33,31 @@ impl From<LLVMDiagnosticSeverity> for DiagnosticSeverity {
     }
 }
 
+impl Display for DiagnosticSeverity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Error => "ERROR",
+                Self::Warning => "WARNING",
+                Self::Remark => "REMARK",
+                Self::Note => "NOTE",
+            }
+        )
+    }
+}
+
 #[derive(Debug)]
-#[allow(unused)]
 pub struct Diagnostic {
-    message: String,
     severity: DiagnosticSeverity,
+    message: String,
+}
+
+impl Display for Diagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.severity, self.message)
+    }
 }
 
 pub struct DiagnosticHandler {

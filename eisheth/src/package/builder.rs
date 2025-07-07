@@ -1,5 +1,7 @@
 use std::{
     collections::{HashMap, hash_map::Entry},
+    error::Error,
+    fmt::Display,
     rc::Rc,
 };
 
@@ -9,13 +11,43 @@ use super::{Package, context::PackageContext, id::PACKAGE_ID_GENERATOR};
 use crate::{
     context::diagnostic::DIAGNOSTIC_HANDLER,
     global_symbol::GlobalSymbols,
-    module::builder::{ModuleBuildError, ModuleBuilder},
+    module::{
+        builder::{ModuleBuildError, ModuleBuilder},
+        built::LinkError,
+    },
 };
 
 #[derive(Debug, Error)]
 pub enum AddModuleError {
     #[error("Module \"{0}\" already exists in this package")]
     AlreadyExists(String),
+}
+
+#[derive(Debug)]
+pub enum PackageBuildError {
+    Link(LinkError),
+    Build(Vec<ModuleBuildError>),
+}
+
+impl Error for PackageBuildError {}
+
+impl Display for PackageBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Link(link_error) => {
+                write!(f, "Link error:\n{link_error}")
+            }
+            Self::Build(module_build_errors) => {
+                writeln!(f, "Module build errors:")?;
+
+                for error in module_build_errors {
+                    writeln!(f, "{error}")?;
+                }
+
+                Ok(())
+            }
+        }
+    }
 }
 
 pub struct PackageBuilder {
@@ -60,7 +92,7 @@ impl PackageBuilder {
     /// This will error out and return the error for the first module that fails to build.
     /// # Panics
     /// If there are no modules in the package
-    pub fn build(self) -> Result<Package, Vec<ModuleBuildError>> {
+    pub fn build(self) -> Result<Package, PackageBuildError> {
         let module_build_results = self.modules.into_values().map(ModuleBuilder::build);
 
         let mut module_build_errors = vec![];
@@ -74,7 +106,7 @@ impl PackageBuilder {
         }
 
         if !module_build_errors.is_empty() {
-            return Err(module_build_errors);
+            return Err(PackageBuildError::Build(module_build_errors));
         }
 
         // TODO: Return the diagnostics to the caller so they can handle printing them
@@ -89,7 +121,7 @@ impl PackageBuilder {
             .expect("package should contain at least a single module");
 
         for module in built_modules {
-            final_module.link(module);
+            final_module.link(module).map_err(PackageBuildError::Link)?;
         }
 
         Ok(Package::new(final_module))
