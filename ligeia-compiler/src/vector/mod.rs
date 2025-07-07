@@ -130,41 +130,10 @@ mod runtime {
     use crate::vector::ffi::Vector;
 
     pub(super) unsafe extern "C" fn initializer(pointer: *mut Vector) {
-        // SAFETY: The caller must provide a valid pointer
-        let pointer = unsafe { &mut *pointer };
-        // SAFETY: The caller must give us a valid, aligned, non-zero element_size already set
-        pointer.data = unsafe { libc::malloc(pointer.element_size as usize) }.cast();
-        pointer.length = 0;
-        pointer.capacity = 1;
+        Vector::initialize(pointer);
     }
 
     pub(super) unsafe extern "C" fn push_uninitialized(vector: *mut Vector) -> *mut u8 {
-        // SAFETY: the user must pass a pointer to a valid vector
-        let vector = unsafe { &mut *vector };
-
-        if vector.length + 1 > vector.capacity {
-            // SAFETY: we know the new size is bigger than previous and aligned, because
-            // element_size must be
-            vector.data = unsafe {
-                libc::realloc(
-                    vector.data.cast(),
-                    vector.capacity as usize * vector.element_size as usize * 2usize,
-                )
-            }
-            .cast();
-            assert!(!vector.data.is_null());
-            vector.capacity *= 2;
-        }
-
-        vector.length += 1;
-
-        // SAFETY: We've ensured that there's enough memory for the element_size, and the calleer
-        // expects it to be uninitialized
-        unsafe {
-            vector.data.byte_offset(
-                isize::try_from(vector.length - 1).unwrap()
-                    * isize::try_from(vector.element_size).unwrap(),
-            )
-        }
+        Vector::push_uninitialized(vector)
     }
 }
