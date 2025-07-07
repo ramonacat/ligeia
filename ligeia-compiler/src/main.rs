@@ -15,7 +15,7 @@ use eisheth::{
 
 use crate::{
     value::{ImportedValueDefinition, ffi::Value},
-    vector::ImportedDefinition,
+    vector::{ImportedDefinition, ffi::Vector},
 };
 
 fn main() {
@@ -45,7 +45,7 @@ fn main() {
     let vector_definition_in_main = value_vector_definition.import_into(main_module);
     let value_definition_in_main = value_definition.import_into(main_module);
 
-    let types = main_module.define_global("types", &vector_definition_in_main, None);
+    let types = Vector::with_type(|r#type| main_module.define_global("types", r#type, None));
     let types = main_module.get_global(types);
 
     let type_value: ConstValue = 1u64.into();
@@ -150,7 +150,7 @@ fn install_types_initializer(
         let entry = function.create_block("entry");
         entry.build(|i| {
             Value::with_type(|r#type| {
-                vector_definition_in_main.initialize(&i, types, r#type.sizeof());
+                vector_definition_in_main.initializer(&i, types, r#type.sizeof());
             });
 
             let pointer = vector_definition_in_main.push_uninitialized(&i, types);
