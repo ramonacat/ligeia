@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Ident, Type};
+use syn::Type;
 
-pub fn rust_type_to_eisheth_type_instance(r#type: &Type, with_super: bool) -> TokenStream {
+pub fn rust_type_to_eisheth_type_instance(r#type: &Type) -> TokenStream {
     match r#type {
         Type::Array(_) => todo!("Array"),
         Type::BareFn(_) => todo!("BareFn"),
@@ -16,7 +16,7 @@ pub fn rust_type_to_eisheth_type_instance(r#type: &Type, with_super: bool) -> To
             if path.qself.is_some() {
                 todo!("path.qself");
             } else if let Some(ident) = path.path.get_ident() {
-                ident_to_type_instance(ident, with_super)
+                quote! { < #ident as ::eisheth::types::RepresentedAs >::representation() }
             } else {
                 todo!("path multiple idents");
             }
@@ -36,19 +36,4 @@ pub fn rust_type_to_eisheth_type_instance(r#type: &Type, with_super: bool) -> To
         Type::Verbatim(_) => todo!("Verbatim"),
         _ => todo!(),
     }
-}
-
-pub fn ident_to_type_instance(ident: &Ident, with_super: bool) -> proc_macro2::TokenStream {
-    let qualifier = if with_super
-        && (
-            // TODO can we check if the ident is for a builtin type somehow, instead of this series of
-            // comparisons?
-            ident != "u8" && ident != "u16" && ident != "u32" && ident != "u64"
-        ) {
-        Some(quote! {super::})
-    } else {
-        None
-    };
-
-    quote! { < #qualifier #ident as ::eisheth::types::RepresentedAs >::representation() }
 }

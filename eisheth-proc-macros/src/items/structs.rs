@@ -42,7 +42,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let field_types: Vec<_> = declaration_fields
         .iter()
-        .map(|x| rust_type_to_eisheth_type_instance(x.2, true))
+        .map(|x| rust_type_to_eisheth_type_instance(x.2))
         .map(|x| quote! { ::std::boxed::Box::new(#x) })
         .collect();
 
@@ -66,6 +66,8 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #representation
 
         mod __ffi_impl {
+            use super::*;
+
             thread_local! {
                 pub static #type_static_name : ::eisheth::types::Struct =
                     ::eisheth::types::Struct::new(
