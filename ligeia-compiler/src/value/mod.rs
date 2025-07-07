@@ -1,4 +1,4 @@
-use eisheth::types::RepresentedAs;
+use eisheth::{types::RepresentedAs, value::ConstOrDynamicValue};
 pub mod ffi;
 
 use eisheth::{
@@ -75,17 +75,22 @@ pub struct ImportedValueDefinition {
 }
 
 impl ImportedValueDefinition {
-    pub fn initialize_pointer(
+    pub fn initialize_pointer<TValue: eisheth::value::Value, TTarget: eisheth::value::Value>(
         &self,
         i: &InstructionBuilder,
-        value: &dyn eisheth::value::Value,
-        target: &dyn eisheth::value::Value,
-    ) {
-        let _ = i.direct_call(self.initialize_pointer, &[value, target], "");
+        value: TValue,
+        target: TTarget,
+    ) where
+        ConstOrDynamicValue: From<TValue> + From<TTarget>,
+    {
+        let _ = i.direct_call(self.initialize_pointer, &[value.into(), target.into()], "");
     }
 
-    pub fn debug_print(&self, i: &InstructionBuilder, value: &dyn eisheth::value::Value) {
-        let _ = i.direct_call(self.debug_print, &[value], "");
+    pub fn debug_print<TValue: eisheth::value::Value>(&self, i: &InstructionBuilder, value: TValue)
+    where
+        ConstOrDynamicValue: From<TValue>,
+    {
+        let _ = i.direct_call(self.debug_print, &[value.into()], "");
     }
 }
 

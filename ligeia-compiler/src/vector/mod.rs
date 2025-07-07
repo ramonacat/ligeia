@@ -9,7 +9,7 @@ use eisheth::{
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
     package::builder::PackageBuilder,
     types::{self, Type},
-    value::DynamicValue,
+    value::{ConstOrDynamicValue, DynamicValue, Value},
 };
 
 use crate::vector::ffi::Vector;
@@ -96,25 +96,37 @@ pub struct ImportedDefinition {
 }
 
 impl ImportedDefinition {
-    pub(crate) fn initialize(
+    pub(crate) fn initialize<TPointer: Value, TElementSize: Value>(
         &self,
         i: &InstructionBuilder,
-        pointer: &dyn eisheth::value::Value,
-        element_size: &dyn eisheth::value::Value,
-    ) {
-        let _ = i.direct_call(self.initializer, &[pointer, element_size], "");
+        pointer: TPointer,
+        element_size: TElementSize,
+    ) where
+        ConstOrDynamicValue: From<TPointer> + From<TElementSize>,
+    {
+        let _ = i.direct_call(self.initializer, &[pointer.into(), element_size.into()], "");
     }
 
-    pub(crate) fn push_uninitialized(
+    pub(crate) fn push_uninitialized<TVector: Value>(
         &self,
         i: &InstructionBuilder,
-        vector: &dyn eisheth::value::Value,
-    ) -> DynamicValue {
-        i.direct_call(self.push_uninitialized, &[vector], "uninitilized_element")
+        vector: TVector,
+    ) -> DynamicValue
+    where
+        ConstOrDynamicValue: From<TVector>,
+    {
+        i.direct_call(
+            self.push_uninitialized,
+            &[vector.into()],
+            "uninitilized_element",
+        )
     }
 
-    pub(crate) fn finalizer(&self, i: &InstructionBuilder, vector: &dyn eisheth::value::Value) {
-        let _ = i.direct_call(self.finalizer, &[vector], "");
+    pub(crate) fn finalizer<TVector: Value>(&self, i: &InstructionBuilder, vector: TVector)
+    where
+        ConstOrDynamicValue: From<TVector>,
+    {
+        let _ = i.direct_call(self.finalizer, &[vector.into()], "");
     }
 }
 

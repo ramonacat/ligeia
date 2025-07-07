@@ -43,7 +43,12 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn add(&self, left: &dyn Value, right: &dyn Value, name: &str) -> ConstOrDynamicValue {
+    pub fn add<TLeft: Value, TRight: Value>(
+        &self,
+        left: TLeft,
+        right: TRight,
+        name: &str,
+    ) -> ConstOrDynamicValue {
         let name = CString::from_str(name).unwrap();
 
         // SAFETY: the builder is valid and positioned, left and right exist for duration of the
@@ -65,12 +70,12 @@ impl<'module> InstructionBuilder<'module> {
     pub fn direct_call(
         &self,
         function: DeclaredFunctionDescriptor,
-        arguments: &[&dyn Value],
+        arguments: &[ConstOrDynamicValue],
         name: &str,
     ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         let function = self.module().get_function(function);
-        let mut arguments: Vec<_> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
+        let mut arguments: Vec<_> = arguments.iter().map(Value::as_llvm_ref).collect();
 
         // SAFETY: we ensured all the references are valid
         let result = unsafe {
@@ -101,7 +106,12 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc_array(&self, r#type: &dyn Type, length: &dyn Value, name: &str) -> DynamicValue {
+    pub fn malloc_array<TLength: Value>(
+        &self,
+        r#type: &dyn Type,
+        length: TLength,
+        name: &str,
+    ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: All pointers come from wrappers ensuring their validity
         let value = unsafe {
@@ -117,7 +127,7 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { DynamicValue::new(value) }
     }
 
-    pub fn store(&self, target_pointer: &dyn Value, value: &dyn Value) {
+    pub fn store<TTarget: Value, TValue: Value>(&self, target_pointer: TTarget, value: TValue) {
         // SAFETY: All the pointers come from safe wrappers that ensure they're valid
         unsafe {
             LLVMBuildStore(
@@ -130,7 +140,12 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Will panic if the name cannpt be converted to a `CString`
-    pub fn load(&self, pointer: &dyn Value, r#type: &dyn Type, name: &str) -> DynamicValue {
+    pub fn load<TPointer: Value>(
+        &self,
+        pointer: TPointer,
+        r#type: &dyn Type,
+        name: &str,
+    ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: all the values come from safe wrappers, so the pointers must be valid
         let result = unsafe {
@@ -147,15 +162,18 @@ impl<'module> InstructionBuilder<'module> {
     }
 
     #[must_use]
-    pub fn r#return(&self, value: Option<&dyn Value>) -> TerminatorToken {
-        if let Some(value) = value {
-            // SAFETY: we've a valid, positioned builder and the value must exist at least for the
-            // duration of the call, so we're good
-            unsafe { LLVMBuildRet(self.builder, value.as_llvm_ref()) };
-        } else {
-            // SAFETY: we have a valid positioned builder
-            unsafe { LLVMBuildRetVoid(self.builder) };
-        }
+    pub fn return_void(&self) -> TerminatorToken {
+        // SAFETY: we have a valid positioned builder
+        unsafe { LLVMBuildRetVoid(self.builder) };
+
+        TerminatorToken
+    }
+
+    #[must_use]
+    pub fn r#return<TValue: Value>(&self, value: TValue) -> TerminatorToken {
+        // SAFETY: we've a valid, positioned builder and the value must exist at least for the
+        // duration of the call, so we're good
+        unsafe { LLVMBuildRet(self.builder, value.as_llvm_ref()) };
 
         TerminatorToken
     }

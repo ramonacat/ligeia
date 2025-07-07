@@ -9,7 +9,6 @@ use thiserror::Error;
 
 use super::{Package, context::PackageContext, id::PACKAGE_ID_GENERATOR};
 use crate::{
-    context::diagnostic::DIAGNOSTIC_HANDLER,
     global_symbol::GlobalSymbols,
     module::{
         AnyModuleExtensions,
@@ -109,13 +108,6 @@ impl PackageBuilder {
         if !module_build_errors.is_empty() {
             return Err(PackageBuildError::Build(module_build_errors));
         }
-
-        // TODO: Return the diagnostics to the caller so they can handle printing them
-        DIAGNOSTIC_HANDLER.with(|handler| {
-            for diagnostic in handler.take_diagnostics() {
-                eprintln!("{diagnostic:?}");
-            }
-        });
 
         let ir_per_module: HashMap<String, String> = built_modules
             .iter()

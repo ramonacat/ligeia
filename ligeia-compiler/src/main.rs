@@ -32,7 +32,7 @@ fn main() {
             let block = function.create_block("entry");
 
             let result: ConstValue = 7u64.into();
-            block.build(|i| i.r#return(Some(&result)));
+            block.build(|i| i.r#return(result));
         },
     );
 
@@ -56,17 +56,17 @@ fn main() {
         main_module,
         &vector_definition_in_main,
         &value_definition_in_main,
-        &types,
-        &test_type,
+        types,
+        test_type,
     );
 
     // TODO: set the finalized_data_pointer to point at types
     main_module.define_global_finalizer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            vector_definition_in_main.finalizer(&i, &types);
+            vector_definition_in_main.finalizer(&i, types);
 
-            i.r#return(None)
+            i.return_void()
         });
     });
 
@@ -83,9 +83,9 @@ fn main() {
             block.build(|i| {
                 let left: ConstValue = 2u64.into();
                 let right: ConstValue = 11u64.into();
-                let sum = i.add(&left, &right, "sum");
+                let sum = i.add(left, right, "sum");
 
-                i.r#return(Some(&sum))
+                i.r#return(sum)
             });
         },
     );
@@ -100,14 +100,14 @@ fn main() {
 
             entry.build(|i| {
                 let base: ConstValue = 32u64.into();
-                let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
+                let sum = i.add(base, function.get_argument(0).unwrap(), "add");
                 let arg: ConstValue = 2u64.into();
-                let value_from_other = i.direct_call(other, &[&arg], "calling_other");
-                let sum2 = i.add(&sum, &value_from_other, "add_again");
+                let value_from_other = i.direct_call(other, &[arg.into()], "calling_other");
+                let sum2 = i.add(sum, value_from_other, "add_again");
                 let value_from_side = i.direct_call(side, &[], "cross_module");
-                let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
+                let sum3 = i.add(sum2, value_from_side, "cross_module_sum");
 
-                i.r#return(Some(&sum3))
+                i.r#return(sum3)
             });
         },
     );
@@ -142,33 +142,33 @@ fn install_types_initializer(
     main_module: &mut ModuleBuilder,
     vector_definition_in_main: &ImportedDefinition,
     value_definition_in_main: &ImportedValueDefinition,
-    types: &ConstValue,
-    test_type: &ConstValue,
+    types: ConstValue,
+    test_type: ConstValue,
 ) {
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
             Value::with_type(|r#type| {
-                vector_definition_in_main.initialize(&i, types, &r#type.sizeof());
+                vector_definition_in_main.initialize(&i, types, r#type.sizeof());
             });
 
             let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
+            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
 
-            value_definition_in_main.debug_print(&i, &pointer);
-
-            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
-
-            value_definition_in_main.debug_print(&i, &pointer);
+            value_definition_in_main.debug_print(&i, pointer);
 
             let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
+            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
 
-            value_definition_in_main.debug_print(&i, &pointer);
+            value_definition_in_main.debug_print(&i, pointer);
 
-            i.r#return(None)
+            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+
+            value_definition_in_main.debug_print(&i, pointer);
+
+            i.return_void()
         });
     });
 }

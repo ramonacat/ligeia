@@ -23,6 +23,7 @@ pub trait RepresentedAs {
     fn representation() -> Self::RepresentationType;
 }
 
+// TODO should types be Copy?
 pub trait Type {
     fn as_llvm_ref(&self) -> LLVMTypeRef;
 }

@@ -1,12 +1,11 @@
 use llvm_sys::{core::LLVMIsConstant, prelude::LLVMValueRef};
 
-// TODO all the kinds of values should depend on the lifetime of the module
-// TODO all the kinds of values should implement Copy
-pub trait Value {
+pub trait Value: Copy {
     fn as_llvm_ref(&self) -> LLVMValueRef;
 }
 
 #[must_use]
+#[derive(Debug, Clone, Copy)]
 pub enum ConstOrDynamicValue {
     Const(ConstValue),
     Dynamic(DynamicValue),
@@ -35,6 +34,7 @@ impl Value for ConstOrDynamicValue {
 }
 
 #[must_use]
+#[derive(Debug, Clone, Copy)]
 pub struct ConstValue {
     reference: LLVMValueRef,
 }
@@ -53,7 +53,14 @@ impl Value for ConstValue {
     }
 }
 
+impl From<ConstValue> for ConstOrDynamicValue {
+    fn from(value: ConstValue) -> Self {
+        Self::Const(value)
+    }
+}
+
 #[must_use]
+#[derive(Debug, Clone, Copy)]
 pub struct DynamicValue {
     reference: LLVMValueRef,
 }
@@ -69,5 +76,11 @@ impl DynamicValue {
 impl Value for DynamicValue {
     fn as_llvm_ref(&self) -> LLVMValueRef {
         self.reference
+    }
+}
+
+impl From<DynamicValue> for ConstOrDynamicValue {
+    fn from(value: DynamicValue) -> Self {
+        Self::Dynamic(value)
     }
 }
