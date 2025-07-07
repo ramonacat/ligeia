@@ -50,4 +50,13 @@ impl Vector {
             )
         }
     }
+
+    pub(crate) fn finalize(vector: *mut Self) {
+        // SAFETY: The caller must ensure they call us with a valid pointer, and that the vector
+        // will not be used anymore
+        unsafe {
+            libc::free((&mut *vector).data.cast());
+            (&mut *vector).data = std::ptr::null_mut();
+        };
+    }
 }

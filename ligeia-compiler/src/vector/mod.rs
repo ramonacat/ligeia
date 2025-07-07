@@ -38,7 +38,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> Definition {
     let push_uninitialized = unsafe {
         module.define_runtime_function(
             &FunctionSignature::new(
-                "push_uninitialized",
+                "vector_push_uninitialized",
                 types::Function::new(
                     &<*mut u8>::representation(),
                     &[&<*mut Vector>::representation()],
@@ -49,25 +49,41 @@ pub fn define(package_builder: &mut PackageBuilder) -> Definition {
         )
     };
 
+    // SAFETY: The signatures match between rust and FFI-side
+    let finalizer = unsafe {
+        module.define_runtime_function(
+            &FunctionSignature::new(
+                "vector_finalizer",
+                types::Function::new(&<()>::representation(), &[&<*mut Vector>::representation()]),
+                Visibility::Export,
+            ),
+            runtime::finalizer as unsafe extern "C" fn(*mut Vector) as usize,
+        )
+    };
+
     Definition {
         initializer,
         push_uninitialized,
+        finalizer,
     }
 }
 
 pub struct Definition {
     initializer: DeclaredFunctionDescriptor,
     push_uninitialized: DeclaredFunctionDescriptor,
+    finalizer: DeclaredFunctionDescriptor,
 }
 
 impl Definition {
     pub(crate) fn import_into(&self, module: &mut ModuleBuilder) -> ImportedDefinition {
         let initializer = module.import_function(self.initializer).unwrap();
         let push_uninitialized = module.import_function(self.push_uninitialized).unwrap();
+        let finalizer = module.import_function(self.finalizer).unwrap();
 
         ImportedDefinition {
             initializer,
             push_uninitialized,
+            finalizer,
         }
     }
 }
@@ -76,6 +92,7 @@ impl Definition {
 pub struct ImportedDefinition {
     initializer: DeclaredFunctionDescriptor,
     push_uninitialized: DeclaredFunctionDescriptor,
+    finalizer: DeclaredFunctionDescriptor,
 }
 
 impl ImportedDefinition {
@@ -95,6 +112,10 @@ impl ImportedDefinition {
     ) -> DynamicValue {
         i.direct_call(self.push_uninitialized, &[vector], "uninitilized_element")
     }
+
+    pub(crate) fn finalizer(&self, i: &InstructionBuilder, vector: &dyn eisheth::value::Value) {
+        let _ = i.direct_call(self.finalizer, &[vector], "");
+    }
 }
 
 impl Type for ImportedDefinition {
@@ -112,5 +133,9 @@ mod runtime {
 
     pub(super) unsafe extern "C" fn push_uninitialized(vector: *mut Vector) -> *mut u8 {
         Vector::push_uninitialized(vector)
+    }
+
+    pub(super) unsafe extern "C" fn finalizer(vector: *mut Vector) {
+        Vector::finalize(vector);
     }
 }

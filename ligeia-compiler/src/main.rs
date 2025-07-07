@@ -1,4 +1,7 @@
-use eisheth::types::{RepresentedAs, TypeExtensions};
+use eisheth::{
+    module::builder::ModuleBuilder,
+    types::{RepresentedAs, TypeExtensions},
+};
 mod value;
 mod vector;
 
@@ -10,7 +13,10 @@ use eisheth::{
     value::ConstValue,
 };
 
-use crate::value::ffi::Value;
+use crate::{
+    value::{ImportedValueDefinition, ffi::Value},
+    vector::ImportedDefinition,
+};
 
 fn main() {
     let mut package_builder = PackageBuilder::new();
@@ -46,28 +52,19 @@ fn main() {
     let test_type = main_module.define_global("type", &u64::representation(), Some(&type_value));
     let test_type = main_module.get_global(test_type);
 
-    // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
-    main_module.define_global_initializer("types", 0, None, |function| {
+    install_types_initializer(
+        main_module,
+        &vector_definition_in_main,
+        &value_definition_in_main,
+        &types,
+        &test_type,
+    );
+
+    // TODO: set the finalized_data_pointer to point at types
+    main_module.define_global_finalizer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            Value::with_type(|r#type| {
-                vector_definition_in_main.initialize(&i, &types, &r#type.sizeof());
-            });
-
-            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
-
-            value_definition_in_main.debug_print(&i, &pointer);
-
-            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
-
-            value_definition_in_main.debug_print(&i, &pointer);
-
-            let pointer = vector_definition_in_main.push_uninitialized(&i, &types);
-            value_definition_in_main.initialize_pointer(&i, &pointer, &test_type);
-
-            value_definition_in_main.debug_print(&i, &pointer);
+            vector_definition_in_main.finalizer(&i, &types);
 
             i.r#return(None)
         });
@@ -139,4 +136,39 @@ fn main() {
     let result = unsafe { callable.call(12) };
 
     println!("Result: {result}");
+}
+
+fn install_types_initializer(
+    main_module: &mut ModuleBuilder,
+    vector_definition_in_main: &ImportedDefinition,
+    value_definition_in_main: &ImportedValueDefinition,
+    types: &ConstValue,
+    test_type: &ConstValue,
+) {
+    // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
+    main_module.define_global_initializer("types", 0, None, |function| {
+        let entry = function.create_block("entry");
+        entry.build(|i| {
+            Value::with_type(|r#type| {
+                vector_definition_in_main.initialize(&i, types, &r#type.sizeof());
+            });
+
+            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
+
+            value_definition_in_main.debug_print(&i, &pointer);
+
+            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
+
+            value_definition_in_main.debug_print(&i, &pointer);
+
+            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+            value_definition_in_main.initialize_pointer(&i, &pointer, test_type);
+
+            value_definition_in_main.debug_print(&i, &pointer);
+
+            i.r#return(None)
+        });
+    });
 }

@@ -1,13 +1,22 @@
 use crate::{
     context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
     global_symbol::GlobalSymbol,
-    module::{AnyModule, AnyModuleExtensions},
+    module::{
+        AnyModule, AnyModuleExtensions,
+        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE},
+    },
     types::RepresentedAs,
 };
+mod global_finalizers;
 mod global_initializers;
 
 use std::{
-    collections::HashMap, error::Error, ffi::CString, fmt::Display, hash::Hash, rc::Rc,
+    collections::HashMap,
+    error::Error,
+    ffi::{CStr, CString},
+    fmt::Display,
+    hash::Hash,
+    rc::Rc,
     str::FromStr as _,
 };
 
@@ -15,7 +24,7 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeModule, LLVMGetUndef,
+        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeMessage, LLVMDisposeModule, LLVMGetUndef,
         LLVMModuleCreateWithNameInContext, LLVMSetInitializer, LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
@@ -38,6 +47,7 @@ use crate::{
 
 thread_local! {
     pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(&<()>::representation(), &[]);
+    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(&<()>::representation(), &[]);
 }
 
 #[derive(Debug)]
@@ -85,12 +95,19 @@ struct GlobalInitializerDescriptor {
     initialized_data_pointer: Option<ConstValue>,
 }
 
+struct GlobalFinalizerDescriptor {
+    priority: u32,
+    function: DeclaredFunctionDescriptor,
+    finalized_data_pointer: Option<ConstValue>,
+}
+
 pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
     functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
     global_initializers: Vec<GlobalInitializerDescriptor>,
+    global_finalizers: Vec<GlobalFinalizerDescriptor>,
     global_mappings: HashMap<String, usize>,
     globals: HashMap<GlobalId, LLVMValueRef>,
 }
@@ -121,6 +138,7 @@ impl ModuleBuilder {
             symbols,
             functions: HashMap::new(),
             global_initializers: vec![],
+            global_finalizers: vec![],
             global_mappings: HashMap::new(),
             globals: HashMap::new(),
         }
@@ -211,6 +229,30 @@ impl ModuleBuilder {
         });
     }
 
+    pub fn define_global_finalizer(
+        &mut self,
+        name: &str,
+        priority: u32,
+        finalized_data_pointer: Option<ConstValue>,
+        implement: impl FnOnce(&FunctionBuilder),
+    ) {
+        let function = GLOBAL_FINALIZER_TYPE.with(|initializer| {
+            self.define_function(
+                &FunctionSignature::new(
+                    format!("global_finalizer_{name}"),
+                    *initializer,
+                    Visibility::Internal,
+                ),
+                implement,
+            )
+        });
+        self.global_finalizers.push(GlobalFinalizerDescriptor {
+            priority,
+            function,
+            finalized_data_pointer,
+        });
+    }
+
     /// # Panics
     /// Will panic if the name cannot be converted to a `CString`
     /// # Errors
@@ -250,6 +292,7 @@ impl ModuleBuilder {
 
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         self.build_global_initializers();
+        self.build_global_finalizers();
 
         let mut out_message = std::ptr::null_mut();
         // SAFETY: We have a valid, non-null `reference`, and since the action is
@@ -266,10 +309,15 @@ impl ModuleBuilder {
         if verify_result != 0 {
             // SAFETY: We received the message from the verify call above, it must be a valid
             // pointer
-            let message = unsafe { CString::from_raw(out_message) }
+            let message = unsafe { CStr::from_ptr(out_message) }
                 .to_str()
                 .unwrap()
                 .to_string();
+
+            // SAFETY: We made a copy of the message, this pointer won't be used anymore
+            unsafe {
+                LLVMDisposeMessage(out_message);
+            };
 
             let diagnostics = DIAGNOSTIC_HANDLER.with(DiagnosticHandler::take_diagnostics);
 
@@ -279,6 +327,18 @@ impl ModuleBuilder {
                 diagnostics,
                 raw_ir: self.dump_ir(),
             });
+        }
+
+        if !out_message.is_null() {
+            // SAFETY: We've checked that the message was set to something, so it must be a valid
+            // string
+            let message = unsafe { CStr::from_ptr(out_message).to_str().unwrap().to_string() };
+
+            // SAFETY: This pointer won't be used anymore, safe to dispose
+            unsafe { LLVMDisposeMessage(out_message) };
+
+            // TODO we should probably return the message to the user instead of just printing
+            eprintln!("{message}");
         }
 
         let reference = self.reference;
@@ -366,6 +426,43 @@ impl ModuleBuilder {
                 "llvm.global_ctors",
                 &initializers_array_type,
                 Some(&initializers_array_type.const_values(&initializer_values)),
+            )
+        });
+
+        // SAFETY: The global was just crated, it's valid
+        unsafe {
+            LLVMSetLinkage(
+                *self.globals.get(&global).unwrap(),
+                LLVMLinkage::LLVMAppendingLinkage,
+            );
+        };
+    }
+
+    fn build_global_finalizers(&mut self) {
+        if self.global_finalizers.is_empty() {
+            return;
+        }
+
+        let global = GLOBAL_FINALIZERS_ENTRY_TYPE.with(|r#type| {
+            let finalizers_array_type = types::Array::new(r#type, self.global_finalizers.len());
+
+            let finalizer_values: Vec<_> = self
+                .global_finalizers
+                .iter()
+                .map(|x| {
+                    (
+                        x.priority,
+                        self.get_function(x.function).as_value(),
+                        x.finalized_data_pointer.as_ref(),
+                    )
+                })
+                .map(|x| FinalizersEntryType::const_values(&x.0.into(), &x.1, x.2))
+                .collect();
+
+            self.define_global(
+                "llvm.global_dtors",
+                &finalizers_array_type,
+                Some(&finalizers_array_type.const_values(&finalizer_values)),
             )
         });
 
