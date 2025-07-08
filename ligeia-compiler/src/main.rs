@@ -2,6 +2,7 @@ use eisheth::{
     module::builder::ModuleBuilder,
     types::{RepresentedAs, TypeExtensions},
 };
+mod side;
 mod value;
 mod vector;
 
@@ -18,21 +19,7 @@ use crate::{value::ffi::Value, vector::ffi::Vector};
 fn main() {
     let mut package_builder = PackageBuilder::new();
 
-    let side_module = package_builder.add_module("side").unwrap();
-    let side = side_module.define_function(
-        &FunctionSignature::new(
-            "side_fn",
-            types::Function::new(&u64::representation(), &[]),
-            Visibility::Export,
-        ),
-        |function| {
-            let block = function.create_block("entry");
-
-            let result: ConstValue = 7u64.into();
-            block.build(|i| i.r#return(result));
-        },
-    );
-
+    let side_definition = side::define(&mut package_builder);
     let value_definition = value::define(&mut package_builder);
     let value_vector_definition = vector::define(&mut package_builder);
 
@@ -41,6 +28,7 @@ fn main() {
     // TODO: some nice interface so the imports are more readable?
     let vector_definition_in_main = value_vector_definition.import_into(main_module);
     let value_definition_in_main = value_definition.import_into(main_module);
+    let side_definition_in_main = side_definition.import_into(main_module);
 
     let types = Vector::with_type(|r#type| main_module.define_global("types", r#type, None));
     let types = main_module.get_global(types);
@@ -67,7 +55,6 @@ fn main() {
         });
     });
 
-    let side = main_module.import_function(side).unwrap();
     let other = main_module.define_function(
         &FunctionSignature::new(
             "other",
@@ -101,7 +88,7 @@ fn main() {
                 let arg: ConstValue = 2u64.into();
                 let value_from_other = i.direct_call(other, &[arg.into()], "calling_other");
                 let sum2 = i.add(sum, value_from_other, "add_again");
-                let value_from_side = i.direct_call(side, &[], "cross_module");
+                let value_from_side = side_definition_in_main.side_fn(&i);
                 let sum3 = i.add(sum2, value_from_side, "cross_module_sum");
 
                 i.r#return(sum3)
