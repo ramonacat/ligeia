@@ -13,10 +13,7 @@ use eisheth::{
     value::ConstValue,
 };
 
-use crate::{
-    value::{ImportedValueDefinition, ffi::Value},
-    vector::{ImportedDefinition, ffi::Vector},
-};
+use crate::{value::ffi::Value, vector::ffi::Vector};
 
 fn main() {
     let mut package_builder = PackageBuilder::new();
@@ -140,8 +137,8 @@ fn main() {
 
 fn install_types_initializer(
     main_module: &mut ModuleBuilder,
-    vector_definition_in_main: &ImportedDefinition,
-    value_definition_in_main: &ImportedValueDefinition,
+    vector_definition_in_main: &vector::ImportedDefinition,
+    value_definition_in_main: &value::ImportedDefinition,
     types: ConstValue,
     test_type: ConstValue,
 ) {
