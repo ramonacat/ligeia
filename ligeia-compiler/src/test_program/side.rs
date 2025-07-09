@@ -2,8 +2,8 @@ use eisheth::define_module;
 
 define_module! {
     module side {
-        internal secret : (builder (input: u64) -> u64);
-        side_fn : (builder (^secret) -> u64);
+        internal secret : builder (input: u64) -> u64;
+        side_fn : builder (^secret) -> u64;
     }
 }
 

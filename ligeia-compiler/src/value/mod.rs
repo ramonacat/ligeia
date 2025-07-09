@@ -5,8 +5,8 @@ pub mod ffi;
 
 define_module! {
     module value {
-        initialize_pointer : (runtime (value: *mut Value, pointer: *mut u8));
-        debug_print : (runtime (value: *mut Value));
+        initialize_pointer : runtime (value: *mut Value, pointer: *mut u8);
+        debug_print : runtime (value: *mut Value);
     }
 }
 

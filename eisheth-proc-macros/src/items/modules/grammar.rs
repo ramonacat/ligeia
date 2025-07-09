@@ -126,19 +126,16 @@ pub struct ModuleFunctionDeclaration {
     pub visibility: Visibility,
     pub name: Ident,
     pub _colon: Colon,
-    pub _contents_parenthesis: Paren,
     pub contents: ModuleFunctionDefinition,
 }
 
 impl Parse for ModuleFunctionDeclaration {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let content;
         Ok(Self {
             visibility: input.parse()?,
             name: input.parse()?,
             _colon: input.parse()?,
-            _contents_parenthesis: parenthesized!(content in input),
-            contents: content.parse()?,
+            contents: input.parse()?,
         })
     }
 }

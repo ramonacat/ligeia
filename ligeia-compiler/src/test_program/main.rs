@@ -1,10 +1,17 @@
-use crate::install_types_initializer;
-use eisheth::function::declaration::{FunctionSignature, Visibility};
-use eisheth::module::DeclaredFunctionDescriptor;
-use eisheth::types::{self, RepresentedAs};
-use eisheth::{package::builder::PackageBuilder, value::ConstValue};
+use eisheth::{
+    function::declaration::{FunctionSignature, Visibility},
+    module::DeclaredFunctionDescriptor,
+    package::builder::PackageBuilder,
+    types::{self, RepresentedAs},
+    value::ConstValue,
+};
 
-use crate::{test_program::side, value, vector::{self, ffi::Vector}};
+use crate::{
+    install_types_initializer,
+    test_program::side,
+    value,
+    vector::{self, ffi::Vector},
+};
 
 pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescriptor {
     let side_definition = side::define(package_builder);

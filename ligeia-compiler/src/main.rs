@@ -1,11 +1,8 @@
-use eisheth::{
-    module::builder::ModuleBuilder,
-    types::TypeExtensions,
-};
+use eisheth::{module::builder::ModuleBuilder, types::TypeExtensions};
 
+mod test_program;
 mod value;
 mod vector;
-mod test_program;
 
 use eisheth::{
     jit::{Jit, function::JitFunction},

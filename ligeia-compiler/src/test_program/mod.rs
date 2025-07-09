@@ -1,2 +1,2 @@
-pub mod side;
 pub mod main;
+pub mod side;

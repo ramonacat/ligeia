@@ -4,9 +4,9 @@ use ffi::Vector;
 
 define_module! {
     module vector {
-        initializer : (runtime (vector: *mut Vector, element_size: u64));
-        push_uninitialized: (runtime (vector: *mut Vector) -> *mut u8);
-        finalizer: (runtime (vector: *mut Vector));
+        initializer : runtime (vector: *mut Vector, element_size: u64);
+        push_uninitialized: runtime (vector: *mut Vector) -> *mut u8;
+        finalizer: runtime (vector: *mut Vector);
     }
 }
 
