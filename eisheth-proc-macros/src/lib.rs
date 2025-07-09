@@ -1,9 +1,7 @@
 use proc_macro::TokenStream;
 
 use crate::items::{
-    enums::ffi_enum_inner,
-    function_signature::{define_module_function_caller_inner, define_module_function_inner},
-    structs::ffi_struct_inner,
+    enums::ffi_enum_inner, modules::define_module_inner, structs::ffi_struct_inner,
 };
 
 mod convert_case;
@@ -21,11 +19,6 @@ pub fn ffi_enum(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn define_module_function_caller(tokens: TokenStream) -> TokenStream {
-    define_module_function_caller_inner(tokens)
-}
-
-#[proc_macro]
-pub fn define_module_function(tokens: TokenStream) -> TokenStream {
-    define_module_function_inner(tokens)
+pub fn define_module(tokens: TokenStream) -> TokenStream {
+    define_module_inner(tokens)
 }

@@ -1,7 +1,5 @@
 pub mod builder;
 pub mod built;
-#[macro_use]
-pub mod macros;
 
 use std::ffi::CStr;
 
