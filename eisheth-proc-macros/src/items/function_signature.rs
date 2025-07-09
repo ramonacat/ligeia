@@ -176,7 +176,6 @@ impl Parse for DefineModuleFunctionCallerInput {
     }
 }
 
-#[allow(dead_code, unreachable_code, unused_variables)]
 pub fn define_module_function_caller_inner(tokens: TokenStream) -> TokenStream {
     let definition = parse_macro_input!(tokens as DefineModuleFunctionCallerInput);
     let name = definition.name;
@@ -246,7 +245,7 @@ pub fn define_module_function_caller_inner(tokens: TokenStream) -> TokenStream {
 
     let return_type = match return_type {
         ReturnType::Default => quote! {},
-        ReturnType::Type(rarrow, _) => quote! { -> ::eisheth::value::DynamicValue },
+        ReturnType::Type(_, _) => quote! { -> ::eisheth::value::DynamicValue },
     };
 
     quote! {
