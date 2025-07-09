@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Literal;
 use quote::{format_ident, quote};
 use syn::{
-    BareFnArg, Ident, ReturnType, Token, parenthesized,
+    BareFnArg, Expr, Ident, ReturnType, Token, parenthesized,
     parse::Parse,
     parse_macro_input,
     punctuated::Punctuated,
@@ -47,17 +47,15 @@ impl Parse for MakeFunctionSignature {
     }
 }
 
-pub fn function_signature_inner(tokens: TokenStream) -> TokenStream {
-    let MakeFunctionSignature {
-        name,
-        comma: _,
-        signature:
-            FunctionSignatureDescriptor {
-                argument_parens: _,
-                arguments,
-                return_type,
-            },
-    } = parse_macro_input!(tokens as MakeFunctionSignature);
+fn make_function_signature(
+    name: &Ident,
+    signature: &FunctionSignatureDescriptor,
+) -> proc_macro2::TokenStream {
+    let FunctionSignatureDescriptor {
+        argument_parens: _,
+        arguments,
+        return_type,
+    } = signature;
 
     let name_str = Literal::string(&name.to_string());
     let arguments = arguments.iter().map(|x| &x.ty);
@@ -79,7 +77,6 @@ pub fn function_signature_inner(tokens: TokenStream) -> TokenStream {
             ::eisheth::function::declaration::Visibility::Export,
         )
     }
-    .into()
 }
 
 enum ModuleFunctionDefinition {
@@ -132,7 +129,7 @@ impl Parse for BuilderFunctionImport {
 
 #[allow(dead_code)]
 struct BuilderFunctionDefinition {
-    runtime: keywords::builder,
+    builder: keywords::builder,
     imports: Option<Punctuated<BuilderFunctionImport, Token![,]>>,
 
     signature: FunctionSignatureDescriptor,
@@ -141,7 +138,7 @@ struct BuilderFunctionDefinition {
 impl Parse for BuilderFunctionDefinition {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            runtime: input.parse()?,
+            builder: input.parse()?,
             imports: if input.peek(Token![^]) {
                 Some(input.parse_terminated(BuilderFunctionImport::parse, Token![,])?)
             } else {
@@ -259,6 +256,77 @@ pub fn define_module_function_caller_inner(tokens: TokenStream) -> TokenStream {
             #(#fn_arguments),*
         ) #return_type #where_clause {
             #body
+        }
+    }
+    .into()
+}
+
+#[allow(dead_code)]
+struct DefineModuleFunctionInput {
+    module: Expr,
+    comma0: Comma,
+    name: Ident,
+    comma1: Comma,
+    definition_parens: Paren,
+    definition: ModuleFunctionDefinition,
+}
+
+impl Parse for DefineModuleFunctionInput {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let definition_content;
+
+        Ok(Self {
+            module: input.parse()?,
+            comma0: input.parse()?,
+            name: input.parse()?,
+            comma1: input.parse()?,
+            definition_parens: parenthesized!(definition_content in input),
+            definition: definition_content.parse()?,
+        })
+    }
+}
+
+pub fn define_module_function_inner(tokens: TokenStream) -> TokenStream {
+    let content = parse_macro_input!(tokens as DefineModuleFunctionInput);
+    let name = content.name;
+    let module = content.module;
+
+    match &content.definition {
+        ModuleFunctionDefinition::Runtime(f) => {
+            let argument_types = f.signature.arguments.iter().map(|x| x.ty.clone());
+            let return_type = &f.signature.return_type;
+
+            let signature_for_cast =
+                quote! { unsafe extern "C" fn(#(#argument_types),*) #return_type };
+
+            let signature = make_function_signature(&name, &f.signature);
+            quote! {
+                let #name = unsafe {
+                    #module.define_runtime_function(
+                        &#signature,
+                        runtime::#name as (#signature_for_cast) as usize
+                    )
+                };
+            }
+        }
+        ModuleFunctionDefinition::Builder(f) => {
+            let argument_getters = f.signature.arguments.iter().enumerate().map(|(i, _)| {
+                quote! { function.get_argument(#i) }
+            });
+
+            let signature = make_function_signature(&name, &f.signature);
+
+            quote! {
+                let #name = #module.define_function(
+                    &#signature,
+                    |function| {
+                        builder::#name(
+                            function,
+                            #(#argument_getters),*
+                        );
+                    }
+                );
+            }
         }
     }
     .into()

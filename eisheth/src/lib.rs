@@ -9,6 +9,6 @@ pub mod types;
 pub mod value;
 
 pub use eisheth_proc_macros::{
-    define_module_function_caller, ffi_enum, ffi_struct, make_function_signature,
+    define_module_function, define_module_function_caller, ffi_enum, ffi_struct,
 };
 pub use llvm_sys;
