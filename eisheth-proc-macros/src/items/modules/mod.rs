@@ -6,13 +6,14 @@ use syn::{Ident, ReturnType, parse_macro_input};
 use crate::{
     convert_case,
     items::modules::grammar::{
-        DefineModuleInput, FunctionSignatureDescriptor, ModuleFunctionDefinition,
+        DefineModuleInput, FunctionSignatureDescriptor, ModuleFunctionDefinition, Visibility,
     },
 };
 
 mod grammar;
 
 fn make_module_function_definition(
+    visibility: Visibility,
     name: &Ident,
     definition: &ModuleFunctionDefinition,
 ) -> proc_macro2::TokenStream {
@@ -24,7 +25,7 @@ fn make_module_function_definition(
             let signature_for_cast =
                 quote! { unsafe extern "C" fn(#(#argument_types),*) #return_type };
 
-            let signature = make_function_signature(name, &f.signature);
+            let signature = make_function_signature(visibility, name, &f.signature);
             quote! {
                 let #name = unsafe {
                     module.define_runtime_function(
@@ -36,10 +37,10 @@ fn make_module_function_definition(
         }
         ModuleFunctionDefinition::Builder(f) => {
             let argument_getters = f.signature.arguments.iter().enumerate().map(|(i, _)| {
-                quote! { function.get_argument(#i) }
+                quote! { function.get_argument(#i).unwrap() }
             });
 
-            let signature = make_function_signature(name, &f.signature);
+            let signature = make_function_signature(visibility, name, &f.signature);
 
             quote! {
                 let #name = module.define_function(
@@ -141,6 +142,7 @@ fn make_module_function_caller(
 }
 
 fn make_function_signature(
+    visibility: Visibility,
     name: &Ident,
     signature: &FunctionSignatureDescriptor,
 ) -> proc_macro2::TokenStream {
@@ -157,6 +159,11 @@ fn make_function_signature(
         ReturnType::Type(_, r#type) => Some(r#type),
     };
 
+    let visibility = match visibility {
+        grammar::Visibility::Export => quote! { Export },
+        grammar::Visibility::Internal => quote! { Internal },
+    };
+
     quote! {
         ::eisheth::function::declaration::FunctionSignature::new(
             #name_str,
@@ -166,8 +173,7 @@ fn make_function_signature(
                     #(&<(#arguments) as ::eisheth::types::RepresentedAs>::representation()),*
                 ],
             ),
-            // TODO allow creating internal functions as well
-            ::eisheth::function::declaration::Visibility::Export,
+            ::eisheth::function::declaration::Visibility::#visibility,
         )
     }
 }
@@ -183,27 +189,35 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
         quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
     });
 
-    let function_imports = content.functions.iter().map(|x| {
+    let exported_functions = content
+        .functions
+        .iter()
+        .filter(|x| x.visibility == Visibility::Export);
+
+    let function_imports = exported_functions.clone().map(|x| {
         let name = &x.name;
 
         quote! { let #name = module.import_function(self.#name).unwrap(); }
     });
 
-    let imported_function_names = content.functions.iter().map(|x| &x.name);
+    let imported_function_names = exported_functions.clone().map(|x| &x.name);
 
     let function_definitions = content
         .functions
         .iter()
-        .map(|x| make_module_function_definition(&x.name, &x.contents));
+        .map(|x| make_module_function_definition(x.visibility, &x.name, &x.contents));
 
     let function_names = content.functions.iter().map(|x| &x.name);
 
-    let module_function_callers = content
-        .functions
-        .iter()
+    let module_function_callers = exported_functions
+        .clone()
         .map(|x| make_module_function_caller(&x.name, &x.contents));
 
-    let definition_fields_ = definition_fields.clone();
+    let imported_definition_fields = exported_functions.clone().map(|x| {
+        let name = &x.name;
+
+        quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
+    });
 
     quote! {
         pub struct Definition {
@@ -233,7 +247,7 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
         }
 
         pub struct ImportedDefinition {
-            #(#definition_fields_),*
+            #(#imported_definition_fields),*
         }
 
         impl ImportedDefinition {

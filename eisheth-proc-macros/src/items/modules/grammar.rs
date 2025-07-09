@@ -5,6 +5,30 @@ use syn::{
     token::{Brace, Caret, Colon, Paren},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Visibility {
+    Export,
+    Internal,
+}
+
+impl Parse for Visibility {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let lookahead = input.lookahead1();
+
+        if lookahead.peek(keywords::export) {
+            let _: keywords::export = input.parse()?;
+
+            Ok(Self::Export)
+        } else if lookahead.peek(keywords::internal) {
+            let _: keywords::internal = input.parse()?;
+
+            Ok(Self::Internal)
+        } else {
+            Ok(Self::Export)
+        }
+    }
+}
+
 pub(super) struct FunctionSignatureDescriptor {
     pub _argument_parens: Paren,
     pub arguments: Punctuated<BareFnArg, Token![,]>,
@@ -93,6 +117,7 @@ impl Parse for BuilderFunctionDefinition {
 }
 
 pub struct ModuleFunctionDeclaration {
+    pub visibility: Visibility,
     pub name: Ident,
     pub _colon: Colon,
     pub _contents_parenthesis: Paren,
@@ -103,6 +128,7 @@ impl Parse for ModuleFunctionDeclaration {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let content;
         Ok(Self {
+            visibility: input.parse()?,
             name: input.parse()?,
             _colon: input.parse()?,
             _contents_parenthesis: parenthesized!(content in input),
@@ -137,4 +163,6 @@ mod keywords {
     custom_keyword!(runtime);
     custom_keyword!(builder);
     custom_keyword!(module);
+    custom_keyword!(internal);
+    custom_keyword!(export);
 }
