@@ -6,7 +6,8 @@ use syn::{Ident, ReturnType, parse_macro_input};
 use crate::{
     convert_case,
     items::modules::grammar::{
-        DefineModuleInput, FunctionSignatureDescriptor, ModuleFunctionDefinition, Visibility,
+        DefineModuleInput, FunctionArgument, FunctionSignatureDescriptor, ModuleFunctionDefinition,
+        Visibility,
     },
 };
 
@@ -19,7 +20,18 @@ fn make_module_function_definition(
 ) -> proc_macro2::TokenStream {
     match &definition {
         ModuleFunctionDefinition::Runtime(f) => {
-            let argument_types = f.signature.arguments.iter().map(|x| x.ty.clone());
+            let argument_types = f
+                .signature
+                .arguments
+                .iter()
+                .map(|x| {
+                    if let FunctionArgument::Arg(arg) = x {
+                        arg
+                    } else {
+                        panic!("Imports are not supported in runtime functions.")
+                    }
+                })
+                .map(|x| x.ty.clone());
             let return_type = &f.signature.return_type;
 
             let signature_for_cast =
@@ -36,9 +48,37 @@ fn make_module_function_definition(
             }
         }
         ModuleFunctionDefinition::Builder(f) => {
-            let argument_getters = f.signature.arguments.iter().enumerate().map(|(i, _)| {
-                quote! { function.get_argument(#i).unwrap() }
-            });
+            let argument_getters = f
+                .signature
+                .arguments
+                .iter()
+                .filter_map(|x| {
+                    if let FunctionArgument::Arg(a) = x {
+                        Some(a)
+                    } else {
+                        None
+                    }
+                })
+                .enumerate()
+                .map(|(i, _)| {
+                    quote! { function.get_argument(#i).unwrap() }
+                });
+
+            let import_arguments = f
+                .signature
+                .arguments
+                .iter()
+                .filter_map(|x| {
+                    if let FunctionArgument::Import(a) = x {
+                        Some(a)
+                    } else {
+                        None
+                    }
+                })
+                .map(|x| {
+                    let name = &x.name;
+                    quote! { #name }
+                });
 
             let signature = make_function_signature(visibility, name, &f.signature);
 
@@ -48,6 +88,7 @@ fn make_module_function_definition(
                     |function| {
                         builder::#name(
                             function,
+                            #(#import_arguments),*
                             #(#argument_getters),*
                         );
                     }
@@ -68,6 +109,13 @@ fn make_module_function_caller(
 
     let argument_type_variables = arguments
         .iter()
+        .filter_map(|x| {
+            if let FunctionArgument::Arg(a) = x {
+                Some(a)
+            } else {
+                None
+            }
+        })
         .map(|x| {
             x.name
                 .as_ref()
@@ -78,9 +126,15 @@ fn make_module_function_caller(
         .map(|x| convert_case::snake_to_pascal(&x))
         .map(|x| format_ident!("T{}", x));
 
-    #[allow(unused)]
     let fn_arguments = arguments
         .iter()
+        .filter_map(|x| {
+            if let FunctionArgument::Arg(a) = x {
+                Some(a)
+            } else {
+                None
+            }
+        })
         .zip(argument_type_variables.clone())
         .map(|x| {
             (
@@ -104,13 +158,22 @@ fn make_module_function_caller(
         quote! {where #(#where_items),*}
     };
 
-    let argument_names = arguments.iter().map(|x| {
-        x.name
-            .as_ref()
-            .expect("Unnamed arguments are not allowed")
-            .0
-            .clone()
-    });
+    let argument_names = arguments
+        .iter()
+        .filter_map(|x| {
+            if let FunctionArgument::Arg(a) = x {
+                Some(a)
+            } else {
+                None
+            }
+        })
+        .map(|x| {
+            x.name
+                .as_ref()
+                .expect("Unnamed arguments are not allowed")
+                .0
+                .clone()
+        });
 
     let name_literal = Literal::string(&name.to_string());
 
@@ -153,7 +216,16 @@ fn make_function_signature(
     } = signature;
 
     let name_str = Literal::string(&name.to_string());
-    let arguments = arguments.iter().map(|x| &x.ty);
+    let arguments = arguments
+        .iter()
+        .filter_map(|x| {
+            if let FunctionArgument::Arg(a) = x {
+                Some(a)
+            } else {
+                None
+            }
+        })
+        .map(|x| &x.ty);
     let return_type = match &return_type {
         ReturnType::Default => None,
         ReturnType::Type(_, r#type) => Some(r#type),

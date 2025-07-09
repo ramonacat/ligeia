@@ -29,9 +29,38 @@ impl Parse for Visibility {
     }
 }
 
+pub struct BuilderFunctionImport {
+    _caret: Caret,
+    pub name: Ident,
+}
+
+impl Parse for BuilderFunctionImport {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            _caret: input.parse()?,
+            name: input.parse()?,
+        })
+    }
+}
+
+pub enum FunctionArgument {
+    Import(BuilderFunctionImport),
+    Arg(Box<BareFnArg>),
+}
+
+impl Parse for FunctionArgument {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if input.peek(Caret) {
+            Ok(Self::Import(input.parse()?))
+        } else {
+            Ok(Self::Arg(input.parse()?))
+        }
+    }
+}
+
 pub(super) struct FunctionSignatureDescriptor {
     pub _argument_parens: Paren,
-    pub arguments: Punctuated<BareFnArg, Token![,]>,
+    pub arguments: Punctuated<FunctionArgument, Token![,]>,
     pub return_type: ReturnType,
 }
 
@@ -40,7 +69,7 @@ impl Parse for FunctionSignatureDescriptor {
         let arguments;
         Ok(Self {
             _argument_parens: parenthesized!(arguments in input),
-            arguments: arguments.parse_terminated(BareFnArg::parse, Token![,])?,
+            arguments: arguments.parse_terminated(FunctionArgument::parse, Token![,])?,
             return_type: input.parse()?,
         })
     }
@@ -78,26 +107,8 @@ impl Parse for RuntimeFunctionDefintion {
     }
 }
 
-// TODO implement imports
-#[allow(dead_code)]
-struct BuilderFunctionImport {
-    caret: Caret,
-    name: Ident,
-}
-
-impl Parse for BuilderFunctionImport {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(Self {
-            caret: input.parse()?,
-            name: input.parse()?,
-        })
-    }
-}
-
 pub struct BuilderFunctionDefinition {
     _builder: keywords::builder,
-    #[allow(dead_code)] // TODO implement imports
-    imports: Option<Punctuated<BuilderFunctionImport, Token![,]>>,
 
     pub signature: FunctionSignatureDescriptor,
 }
@@ -106,11 +117,6 @@ impl Parse for BuilderFunctionDefinition {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             _builder: input.parse()?,
-            imports: if input.peek(Token![^]) {
-                Some(input.parse_terminated(BuilderFunctionImport::parse, Token![,])?)
-            } else {
-                None
-            },
             signature: input.parse()?,
         })
     }
