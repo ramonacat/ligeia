@@ -12,7 +12,7 @@ use crate::{
     global_symbol::GlobalSymbols,
     module::{
         AnyModuleExtensions,
-        builder::{ModuleBuildError, ModuleBuilder},
+        builder::{ModuleBuilder, errors::ModuleBuildError},
         built::LinkError,
     },
 };

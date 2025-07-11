@@ -5,12 +5,20 @@ use llvm_sys::{
 
 use crate::{
     context::LLVM_CONTEXT,
+    module::DeclaredFunctionDescriptor,
     types::{self, RepresentedAs, Type},
     value::{ConstValue, Value},
 };
 
 thread_local! {
     pub(super) static GLOBAL_FINALIZERS_ENTRY_TYPE: FinalizersEntryType = FinalizersEntryType::new();
+    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
+}
+
+pub(super) struct GlobalFinalizerDescriptor {
+    pub priority: u32,
+    pub function: DeclaredFunctionDescriptor,
+    pub finalized_data_pointer: Option<ConstValue>,
 }
 
 #[derive(Debug, Clone, Copy)]

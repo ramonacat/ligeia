@@ -3,11 +3,18 @@ use crate::{
     global_symbol::GlobalSymbol,
     module::{
         AnyModule, AnyModuleExtensions, DeclaredGlobalDescriptor, GlobalReference,
-        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE},
+        builder::{
+            errors::{FunctionImportError, ModuleBuildError},
+            global_finalizers::{
+                FinalizersEntryType, GLOBAL_FINALIZER_TYPE, GLOBAL_FINALIZERS_ENTRY_TYPE,
+                GlobalFinalizerDescriptor,
+            },
+            global_initializers::{GLOBAL_INITIALIZER_TYPE, GlobalInitializerDescriptor},
+        },
     },
-    types::RepresentedAs,
 };
 
+pub mod errors;
 mod functions;
 mod global_finalizers;
 mod global_initializers;
@@ -15,9 +22,7 @@ mod globals;
 
 use std::{
     collections::HashMap,
-    error::Error,
     ffi::{CStr, CString},
-    fmt::Display,
     hash::Hash,
     rc::Rc,
     str::FromStr as _,
@@ -31,7 +36,6 @@ use llvm_sys::{
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
-use thiserror::Error;
 
 use super::{DeclaredFunctionDescriptor, ModuleId, built::Module};
 use crate::{
@@ -47,61 +51,8 @@ use crate::{
     value::ConstValue,
 };
 
-thread_local! {
-    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
-    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
-}
-
-#[derive(Debug)]
-pub struct ModuleBuildError {
-    module_name: String,
-    message: String,
-    diagnostics: Vec<crate::context::diagnostic::Diagnostic>,
-    raw_ir: String,
-}
-
-impl Display for ModuleBuildError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Failed to build the module \"{}\":\n{}\nDiagnosics:\n",
-            self.module_name, self.message,
-        )?;
-
-        for diagnostic in &self.diagnostics {
-            writeln!(f, "{diagnostic}")?;
-        }
-
-        writeln!(f, "LLVM IR:\n{}", self.raw_ir)?;
-
-        Ok(())
-    }
-}
-
-impl Error for ModuleBuildError {}
-
-#[derive(Debug, Error)]
-pub enum FunctionImportError {
-    #[error("Function {0:?} is not exported")]
-    NotExported(DeclaredFunctionDescriptor),
-    #[error("Function {0:?} cannot be imported into the same module where it was defined")]
-    DefinedInThisModule(DeclaredFunctionDescriptor),
-}
-
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
 pub struct GlobalId(ModuleId, GlobalSymbol);
-
-struct GlobalInitializerDescriptor {
-    priority: u32,
-    function: DeclaredFunctionDescriptor,
-    initialized_data_pointer: Option<ConstValue>,
-}
-
-struct GlobalFinalizerDescriptor {
-    priority: u32,
-    function: DeclaredFunctionDescriptor,
-    finalized_data_pointer: Option<ConstValue>,
-}
 
 pub struct ModuleBuilder {
     id: ModuleId,

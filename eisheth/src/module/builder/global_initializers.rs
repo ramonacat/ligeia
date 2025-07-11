@@ -5,12 +5,20 @@ use llvm_sys::{
 
 use crate::{
     context::LLVM_CONTEXT,
+    module::DeclaredFunctionDescriptor,
     types::{self, RepresentedAs, Type},
     value::{ConstValue, Value},
 };
 
 thread_local! {
     pub(super) static GLOBAL_INITIALIZERS_ENTRY_TYPE: InitializersEntryType = InitializersEntryType::new();
+    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
+}
+
+pub(super) struct GlobalInitializerDescriptor {
+    pub priority: u32,
+    pub function: DeclaredFunctionDescriptor,
+    pub initialized_data_pointer: Option<ConstValue>,
 }
 
 #[derive(Debug, Clone, Copy)]
