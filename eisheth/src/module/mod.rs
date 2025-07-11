@@ -84,8 +84,14 @@ impl DeclaredGlobalDescriptor {
 pub struct GlobalReference<'module> {
     _module: PhantomData<&'module dyn AnyModule>,
     reference: LLVMValueRef,
-    #[allow(unused)]
     r#type: OpaqueType,
+}
+
+impl GlobalReference<'_> {
+    #[must_use]
+    pub const fn r#type(&self) -> OpaqueType {
+        self.r#type
+    }
 }
 
 impl From<GlobalReference<'_>> for ConstValue {
@@ -101,5 +107,11 @@ impl From<GlobalReference<'_>> for ConstOrDynamicValue {
         let value: ConstValue = value.into();
 
         value.into()
+    }
+}
+
+impl ValueReference for GlobalReference<'_> {
+    fn value(&self, _module: &builder::ModuleBuilder) -> ConstOrDynamicValue {
+        (*self).into()
     }
 }

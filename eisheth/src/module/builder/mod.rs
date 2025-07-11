@@ -198,6 +198,14 @@ impl ModuleBuilder {
         Ok(id)
     }
 
+    pub fn import_global(&mut self, id: DeclaredGlobalDescriptor) -> DeclaredGlobalDescriptor {
+        let (id, global) = globals::import_global(self, id);
+
+        self.global_values.insert(id, global);
+
+        id
+    }
+
     pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
         self.build_global_initializers();
         self.build_global_finalizers();

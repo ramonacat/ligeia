@@ -283,7 +283,7 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
         grammar::ModuleItemKind::Global(g) => {
             let name = &g.name;
 
-            quote! { let #name = module.import_global(self.#name).unwrap(); }
+            quote! { let #name = module.import_global(self.#name); }
         }
     });
 
@@ -376,25 +376,15 @@ fn make_global_access_methods(
     declaration: &grammar::GlobalDeclaration,
 ) -> proc_macro2::TokenStream {
     let name = &declaration.name;
-    let name_str = name.to_string();
 
-    let load_name = format_ident!("load_{}", name);
-    let store_name = format_ident!("load_{}", name);
+    let getter_name = format_ident!("get_{}", name);
 
     quote! {
-        pub fn #load_name(
+        pub fn #getter_name<'module>(
             &self,
-            i: &::eisheth::function::instruction_builder::InstructionBuilder
-        ) -> DynamicValue {
-            i.load(self.#name.into(), self.#name.r#type(), #name_str)
-        }
-
-        pub fn #store_name<TValue: ::eisheth::value::Value>(
-            &self,
-            i: &::eisheth::function::instruction_builder::InstructionBuilder,
-            value: TValue
-        ) {
-            i.store(self.#name.into(), value);
+            i: &'module ::eisheth::function::instruction_builder::InstructionBuilder<'module>
+        ) -> ::eisheth::module::GlobalReference<'module> {
+            i.module().get_global(self.#name)
         }
     }
 }

@@ -52,3 +52,28 @@ pub fn define_global<T: Type>(
 
     (descriptor, global)
 }
+
+pub fn import_global(
+    module: &ModuleBuilder,
+    id: DeclaredGlobalDescriptor,
+) -> (DeclaredGlobalDescriptor, LLVMValueRef) {
+    // TODO Return a Result instead
+    assert!(module.id != id.module_id);
+    assert!(id.visibility == Visibility::Export);
+
+    let name = module.symbols.resolve(id.name);
+    let c_name = CString::from_str(&name).unwrap();
+
+    // SAFETY: All the references come from wrappers which keep them alive
+    let global =
+        unsafe { LLVMAddGlobal(module.reference, id.r#type.as_llvm_ref(), c_name.as_ptr()) };
+
+    let id = DeclaredGlobalDescriptor {
+        module_id: module.id,
+        name: id.name,
+        r#type: id.r#type,
+        visibility: Visibility::Internal,
+    };
+
+    (id, global)
+}

@@ -182,7 +182,8 @@ impl<'module> InstructionBuilder<'module> {
         TerminatorToken
     }
 
-    const fn module(&self) -> &ModuleBuilder {
+    #[must_use]
+    pub const fn module(&self) -> &'module ModuleBuilder {
         self.function_builder.module()
     }
 
