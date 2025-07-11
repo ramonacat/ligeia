@@ -25,11 +25,11 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let value_definition_in_main = value_definition.import_into(main_module);
     let side_definition_in_main = side_definition.import_into(main_module);
 
-    let types = Vector::with_type(|r#type| main_module.define_global("types", r#type, None));
+    let types = main_module.define_global("types", Vector::r#type(), None);
     let types = main_module.get_global(types);
 
     let type_value: ConstValue = 1u64.into();
-    let test_type = main_module.define_global("type", &u64::representation(), Some(&type_value));
+    let test_type = main_module.define_global("type", u64::representation(), Some(&type_value));
     let test_type = main_module.get_global(test_type);
 
     install_types_initializer(
@@ -53,7 +53,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let other = main_module.define_function(
         &FunctionSignature::new(
             "other",
-            types::Function::new(&u64::representation(), &[&u64::representation()]),
+            types::Function::new(u64::representation(), &[u64::representation().into()]),
             Visibility::Internal,
         ),
         |function| {
@@ -72,7 +72,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     main_module.define_function(
         &FunctionSignature::new(
             "main",
-            types::Function::new(&u64::representation(), &[&u64::representation()]),
+            types::Function::new(u64::representation(), &[u64::representation().into()]),
             Visibility::Export,
         ),
         move |function| {

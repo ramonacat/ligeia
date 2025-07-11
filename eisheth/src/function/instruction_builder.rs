@@ -95,7 +95,7 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc(&self, r#type: &dyn Type, name: &str) -> DynamicValue {
+    pub fn malloc<T: Type>(&self, r#type: T, name: &str) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         // SAFETY: All the pointers come from wrappers ensuring their validity
         let value = unsafe { LLVMBuildMalloc(self.builder, r#type.as_llvm_ref(), name.as_ptr()) };
@@ -106,9 +106,9 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc_array<TLength: Value>(
+    pub fn malloc_array<TLength: Value, TValue: Type>(
         &self,
-        r#type: &dyn Type,
+        r#type: TValue,
         length: TLength,
         name: &str,
     ) -> DynamicValue {
@@ -140,10 +140,10 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Will panic if the name cannpt be converted to a `CString`
-    pub fn load<TPointer: Value>(
+    pub fn load<TPointer: Value, TValue: Type>(
         &self,
         pointer: TPointer,
-        r#type: &dyn Type,
+        r#type: TValue,
         name: &str,
     ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();

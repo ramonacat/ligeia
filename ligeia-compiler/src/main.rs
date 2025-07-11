@@ -54,9 +54,7 @@ fn install_types_initializer(
     main_module.define_global_initializer("types", 0, None, |function| {
         let entry = function.create_block("entry");
         entry.build(|i| {
-            Value::with_type(|r#type| {
-                vector_definition_in_main.initializer(&i, types, r#type.sizeof());
-            });
+            vector_definition_in_main.initializer(&i, types, Value::r#type().sizeof());
 
             let pointer = vector_definition_in_main.push_uninitialized(&i, types);
             value_definition_in_main.initialize_pointer(&i, pointer, test_type);

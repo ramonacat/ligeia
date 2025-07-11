@@ -13,6 +13,7 @@ thread_local! {
     pub(super) static GLOBAL_FINALIZERS_ENTRY_TYPE: FinalizersEntryType = FinalizersEntryType::new();
 }
 
+#[derive(Debug, Clone, Copy)]
 pub(super) struct FinalizersEntryType(LLVMTypeRef);
 
 impl FinalizersEntryType {

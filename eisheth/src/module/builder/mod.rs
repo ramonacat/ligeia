@@ -46,8 +46,8 @@ use crate::{
 };
 
 thread_local! {
-    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(&<()>::representation(), &[]);
-    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(&<()>::representation(), &[]);
+    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
+    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
 }
 
 #[derive(Debug)]
@@ -376,10 +376,10 @@ impl ModuleBuilder {
 
     /// # Panics
     /// This function can panic if the `name` cannot be converted into a `CString`
-    pub fn define_global(
+    pub fn define_global<T: Type>(
         &mut self,
         name: &str,
-        r#type: &dyn Type,
+        r#type: T,
         value: Option<&ConstValue>,
     ) -> GlobalId {
         let id = GlobalId(self.id, self.symbols.intern(name));
@@ -407,7 +407,8 @@ impl ModuleBuilder {
         }
 
         let global = GLOBAL_INITIALIZERS_ENTRY_TYPE.with(|r#type| {
-            let initializers_array_type = types::Array::new(r#type, self.global_initializers.len());
+            let initializers_array_type =
+                types::Array::new(*r#type, self.global_initializers.len());
 
             let initializer_values: Vec<_> = self
                 .global_initializers
@@ -424,7 +425,7 @@ impl ModuleBuilder {
 
             self.define_global(
                 "llvm.global_ctors",
-                &initializers_array_type,
+                initializers_array_type,
                 Some(&initializers_array_type.const_values(&initializer_values)),
             )
         });
@@ -444,7 +445,7 @@ impl ModuleBuilder {
         }
 
         let global = GLOBAL_FINALIZERS_ENTRY_TYPE.with(|r#type| {
-            let finalizers_array_type = types::Array::new(r#type, self.global_finalizers.len());
+            let finalizers_array_type = types::Array::new(*r#type, self.global_finalizers.len());
 
             let finalizer_values: Vec<_> = self
                 .global_finalizers
@@ -461,7 +462,7 @@ impl ModuleBuilder {
 
             self.define_global(
                 "llvm.global_dtors",
-                &finalizers_array_type,
+                finalizers_array_type,
                 Some(&finalizers_array_type.const_values(&finalizer_values)),
             )
         });

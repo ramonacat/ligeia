@@ -8,13 +8,14 @@ use crate::{
     value::{ConstValue, Value},
 };
 
-pub struct Array<'a> {
+#[derive(Debug, Clone, Copy)]
+pub struct Array<T: Type> {
     reference: LLVMTypeRef,
-    element_type: &'a dyn Type,
+    element_type: T,
 }
 
-impl<'a> Array<'a> {
-    pub fn new(element_type: &'a dyn Type, len: usize) -> Self {
+impl<T: Type> Array<T> {
+    pub fn new(element_type: T, len: usize) -> Self {
         // SAFETY: We know the element_type is a valid type
         let reference = unsafe { LLVMArrayType2(element_type.as_llvm_ref(), len as u64) };
         Self {
@@ -41,7 +42,7 @@ impl<'a> Array<'a> {
     }
 }
 
-impl Type for Array<'_> {
+impl<T: Type> Type for Array<T> {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }

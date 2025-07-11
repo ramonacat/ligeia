@@ -13,6 +13,7 @@ thread_local! {
     pub(super) static GLOBAL_INITIALIZERS_ENTRY_TYPE: InitializersEntryType = InitializersEntryType::new();
 }
 
+#[derive(Debug, Clone, Copy)]
 pub(super) struct InitializersEntryType(LLVMTypeRef);
 
 impl InitializersEntryType {

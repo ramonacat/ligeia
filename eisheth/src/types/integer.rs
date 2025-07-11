@@ -16,7 +16,7 @@ pub struct Integer<T> {
     _context: PhantomData<&'static Context>,
 }
 
-impl<T> Type for Integer<T> {
+impl<T: Copy> Type for Integer<T> {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }

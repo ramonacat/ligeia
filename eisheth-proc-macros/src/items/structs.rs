@@ -43,7 +43,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let field_types: Vec<_> = declaration_fields
         .iter()
         .map(|x| rust_type_to_eisheth_type_instance(x.2))
-        .map(|x| quote! { ::std::boxed::Box::new(#x) })
+        .map(|x| quote! { #x.into() })
         .collect();
 
     let visibility = &item.vis;
@@ -58,7 +58,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         #item
 
         impl #impl_generics #name #ty_generics #where_clause {
-            #visibility fn with_type<TReturn>(callback: impl FnOnce(&::eisheth::types::Struct) -> TReturn) -> TReturn {
+            #visibility fn r#type() -> ::eisheth::types::Struct {
                 thread_local! {
                     static #type_static_name : ::eisheth::types::Struct =
                         ::eisheth::types::Struct::new(
@@ -69,7 +69,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
                         );
                 }
 
-                #type_static_name.with(callback)
+                #type_static_name.with(|x| *x)
             }
         }
 

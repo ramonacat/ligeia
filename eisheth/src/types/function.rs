@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use super::Type;
-use crate::context::Context;
+use crate::{context::Context, types::TypeEnum};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Function {
@@ -26,8 +26,8 @@ impl Function {
     /// # Panics
     /// If there are more params for the function than an u32 can hold. If this happens, you might
     /// want to consider refactoring your code.
-    pub fn new(r#return: &dyn Type, arguments: &[&dyn Type]) -> Self {
-        let mut param_types: Vec<_> = arguments.iter().map(|x| x.as_llvm_ref()).collect();
+    pub fn new<TReturn: Type>(r#return: TReturn, arguments: &[TypeEnum]) -> Self {
+        let mut param_types: Vec<_> = arguments.iter().map(Type::as_llvm_ref).collect();
 
         Self {
             // SAFETY: This constructor needs it parameters alive only while it's being executed,
