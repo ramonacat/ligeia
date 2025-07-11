@@ -300,10 +300,14 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
             let name = &g.name;
             let name_str = name.to_string();
             let r#type = rust_type_to_eisheth_type_instance(&g.r#type);
+            let visibility = match &x.visibility {
+                grammar::Visibility::Export => quote! { Export },
+                grammar::Visibility::Internal => quote! { Internal },
+            };
 
             quote! {
                 // TODO support setting a const initializer
-                let #name = module.define_global(#name_str, #r#type, None);
+                let #name = module.define_global(::eisheth::function::declaration::Visibility::#visibility, #name_str, #r#type, None);
             }
         }
     });

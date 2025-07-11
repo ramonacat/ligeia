@@ -286,11 +286,12 @@ impl ModuleBuilder {
     /// This function can panic if the `name` cannot be converted into a `CString`
     pub fn define_global<T: Type>(
         &mut self,
+        visibility: Visibility,
         name: &str,
         r#type: T,
         value: Option<&ConstValue>,
     ) -> DeclaredGlobalDescriptor {
-        let (descriptor, global) = globals::define_global(self, name, r#type, value);
+        let (descriptor, global) = globals::define_global(self, visibility, name, r#type, value);
         self.global_values.insert(descriptor, global);
 
         descriptor
@@ -319,6 +320,7 @@ impl ModuleBuilder {
                 .collect();
 
             self.define_global(
+                Visibility::Export,
                 "llvm.global_ctors",
                 initializers_array_type,
                 Some(&initializers_array_type.const_values(&initializer_values)),
@@ -356,6 +358,7 @@ impl ModuleBuilder {
                 .collect();
 
             self.define_global(
+                Visibility::Export,
                 "llvm.global_dtors",
                 finalizers_array_type,
                 Some(&finalizers_array_type.const_values(&finalizer_values)),

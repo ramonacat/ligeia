@@ -1,6 +1,7 @@
 use crate::types;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// TODO move to another module, globals use this too
 pub enum Visibility {
     Internal,
     Export,

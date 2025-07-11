@@ -25,10 +25,15 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let value_definition_in_main = value_definition.import_into(main_module);
     let side_definition_in_main = side_definition.import_into(main_module);
 
-    let types = main_module.define_global("types", Vector::r#type(), None);
+    let types = main_module.define_global(Visibility::Internal, "types", Vector::r#type(), None);
 
     let type_value: ConstValue = 1u64.into();
-    let test_type = main_module.define_global("type", u64::representation(), Some(&type_value));
+    let test_type = main_module.define_global(
+        Visibility::Internal,
+        "type",
+        u64::representation(),
+        Some(&type_value),
+    );
 
     install_types_initializer(
         main_module,
