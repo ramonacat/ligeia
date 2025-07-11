@@ -5,6 +5,8 @@ pub mod pointer;
 pub mod r#struct;
 pub mod void;
 
+use std::{marker::PhantomData};
+
 pub use array::Array;
 pub use function::Function;
 pub use integer::Integer;
@@ -15,7 +17,7 @@ use llvm_sys::{
 pub use pointer::Pointer;
 pub use r#struct::Struct;
 
-use crate::{types::void::VoidType, value::ConstValue};
+use crate::value::ConstValue;
 
 pub trait RepresentedAs {
     type RepresentationType: Type;
@@ -52,55 +54,22 @@ impl<T: Type> TypeExtensions for T {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum TypeEnum {
-    Void(VoidType),
-    U8(Integer<u8>),
-    U16(Integer<u16>),
-    U32(Integer<u32>),
-    U64(Integer<u64>),
-    Pointer(Pointer),
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct OpaqueType(LLVMTypeRef, PhantomData<&'static crate::context::Context>);
 
-impl Type for TypeEnum {
-    fn as_llvm_ref(&self) -> LLVMTypeRef {
-        match self {
-            Self::Void(void_type) => void_type.as_llvm_ref(),
-            Self::Pointer(pointer) => pointer.as_llvm_ref(),
-            Self::U8(integer) => integer.as_llvm_ref(),
-            Self::U16(integer) => integer.as_llvm_ref(),
-            Self::U32(integer) => integer.as_llvm_ref(),
-            Self::U64(integer) => integer.as_llvm_ref(),
-        }
+impl OpaqueType {
+    pub(crate) unsafe fn new(reference: LLVMTypeRef) -> Self {
+        Self(reference, PhantomData)
+    }
+
+    pub(crate) fn as_llvm_ref(&self) -> LLVMTypeRef {
+        self.0
     }
 }
 
-impl From<Integer<u8>> for TypeEnum {
-    fn from(value: Integer<u8>) -> Self {
-        Self::U8(value)
-    }
-}
-
-impl From<Integer<u16>> for TypeEnum {
-    fn from(value: Integer<u16>) -> Self {
-        Self::U16(value)
-    }
-}
-
-impl From<Integer<u32>> for TypeEnum {
-    fn from(value: Integer<u32>) -> Self {
-        Self::U32(value)
-    }
-}
-
-impl From<Integer<u64>> for TypeEnum {
-    fn from(value: Integer<u64>) -> Self {
-        Self::U64(value)
-    }
-}
-
-impl From<Pointer> for TypeEnum {
-    fn from(value: Pointer) -> Self {
-        Self::Pointer(value)
+impl<T: Type> From<T> for OpaqueType {
+    fn from(value: T) -> Self {
+        // SAFETY: we take the reference from a valid object, and types are never destroyed
+        unsafe { OpaqueType::new(value.as_llvm_ref()) }
     }
 }

@@ -12,7 +12,7 @@ use super::Type;
 use crate::{
     context::{Context, LLVM_CONTEXT},
     function::instruction_builder::InstructionBuilder,
-    types::{RepresentedAs, TypeEnum},
+    types::{OpaqueType, RepresentedAs},
     value::{ConstValue, DynamicValue, Value},
 };
 
@@ -26,13 +26,13 @@ impl Struct {
     /// # Panics
     /// This function will panic if the name can't be converted into a `CString`
     #[must_use]
-    pub fn new(name: &str, fields: &[TypeEnum]) -> Self {
+    pub fn new(name: &str, fields: &[OpaqueType]) -> Self {
         let name = CString::from_str(name).unwrap();
         let reference = LLVM_CONTEXT
             // SAFETY: The context is &'static so must always be valid, the name is a valid pointer
             // for the duration of the call
             .with(|context| unsafe { LLVMStructCreateNamed(context.as_llvm_ref(), name.as_ptr()) });
-        let mut elements: Vec<_> = fields.iter().map(Type::as_llvm_ref).collect();
+        let mut elements: Vec<_> = fields.iter().map(|x| x.as_llvm_ref()).collect();
 
         // SAFETY: The reference was just created, so it's valid, the elements vector is alive and
         // the length and type match expectations of the method called.

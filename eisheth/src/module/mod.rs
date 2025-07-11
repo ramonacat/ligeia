@@ -1,12 +1,14 @@
 pub mod builder;
 pub mod built;
 
-use std::ffi::CStr;
+use std::{ffi::CStr, marker::PhantomData};
 
 use llvm_sys::{
     core::{LLVMDisposeMessage, LLVMPrintModuleToString},
-    prelude::LLVMModuleRef,
+    prelude::{LLVMModuleRef, LLVMValueRef},
 };
+
+use crate::{types::OpaqueType, value::{ConstOrDynamicValue, ConstValue}};
 
 use super::{
     function::declaration::Visibility, global_symbol::GlobalSymbol, package::id::PackageId,
@@ -52,5 +54,37 @@ pub struct DeclaredFunctionDescriptor {
 impl DeclaredFunctionDescriptor {
     pub(crate) const fn name(&self) -> GlobalSymbol {
         self.name
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct DeclaredGlobalDescriptor {
+    module_id: ModuleId,
+    name: GlobalSymbol,
+    r#type: OpaqueType,
+    visibility: Visibility,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GlobalReference<'module> {
+    _module: PhantomData<&'module dyn AnyModule>,
+    reference: LLVMValueRef,
+    #[allow(unused)]
+    r#type: OpaqueType,
+}
+
+impl Into<ConstValue> for GlobalReference<'_> {
+    fn into(self) -> ConstValue {
+        // SAFETY we kept the reference to the module, so it must still be live, which means the
+        // global exists
+        unsafe { ConstValue::new(self.reference) }
+    }
+}
+
+impl From<GlobalReference<'_>> for ConstOrDynamicValue {
+    fn from(value: GlobalReference<'_>) -> Self {
+        let value:ConstValue = value.into();
+
+        value.into()
     }
 }

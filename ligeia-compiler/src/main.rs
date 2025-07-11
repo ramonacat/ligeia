@@ -1,3 +1,5 @@
+use eisheth::module::DeclaredGlobalDescriptor;
+use eisheth::value::ConstOrDynamicValue;
 use eisheth::{module::builder::ModuleBuilder, types::TypeExtensions};
 
 mod test_program;
@@ -7,7 +9,6 @@ mod vector;
 use eisheth::{
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
-    value::ConstValue,
 };
 
 use crate::value::ffi::Value;
@@ -47,9 +48,12 @@ fn install_types_initializer(
     main_module: &mut ModuleBuilder,
     vector_definition_in_main: &vector::ImportedDefinition,
     value_definition_in_main: &value::ImportedDefinition,
-    types: ConstValue,
-    test_type: ConstValue,
+    types: DeclaredGlobalDescriptor,
+    test_type: DeclaredGlobalDescriptor,
 ) {
+    let types:ConstOrDynamicValue = main_module.get_global(types).into();
+    let test_type:ConstOrDynamicValue = main_module.get_global(test_type).into();
+
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {
         let entry = function.create_block("entry");

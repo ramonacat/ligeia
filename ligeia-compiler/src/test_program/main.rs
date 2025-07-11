@@ -3,14 +3,11 @@ use eisheth::{
     module::DeclaredFunctionDescriptor,
     package::builder::PackageBuilder,
     types::{self, RepresentedAs},
-    value::ConstValue,
+    value::{ConstOrDynamicValue, ConstValue},
 };
 
 use crate::{
-    install_types_initializer,
-    test_program::side,
-    value,
-    vector::{self, ffi::Vector},
+    install_types_initializer, test_program::side, value, vector::{self, ffi::Vector}
 };
 
 pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescriptor {
@@ -26,11 +23,9 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let side_definition_in_main = side_definition.import_into(main_module);
 
     let types = main_module.define_global("types", Vector::r#type(), None);
-    let types = main_module.get_global(types);
 
     let type_value: ConstValue = 1u64.into();
     let test_type = main_module.define_global("type", u64::representation(), Some(&type_value));
-    let test_type = main_module.get_global(test_type);
 
     install_types_initializer(
         main_module,
@@ -40,6 +35,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
         test_type,
     );
 
+    let types:ConstOrDynamicValue = main_module.get_global(types).into();
     // TODO: set the finalized_data_pointer to point at types
     main_module.define_global_finalizer("types", 0, None, |function| {
         let entry = function.create_block("entry");

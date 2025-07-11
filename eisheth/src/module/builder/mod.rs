@@ -1,9 +1,8 @@
 use crate::{
-    context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
+    context::diagnostic::{DiagnosticHandler, DIAGNOSTIC_HANDLER},
     global_symbol::GlobalSymbol,
     module::{
-        AnyModule, AnyModuleExtensions,
-        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE},
+        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE}, AnyModule, AnyModuleExtensions, DeclaredGlobalDescriptor, GlobalReference
     },
     types::RepresentedAs,
 };
@@ -109,7 +108,7 @@ pub struct ModuleBuilder {
     global_initializers: Vec<GlobalInitializerDescriptor>,
     global_finalizers: Vec<GlobalFinalizerDescriptor>,
     global_mappings: HashMap<String, usize>,
-    globals: HashMap<GlobalId, LLVMValueRef>,
+    globals: HashMap<DeclaredGlobalDescriptor, LLVMValueRef>,
 }
 
 impl AnyModule for ModuleBuilder {
@@ -381,8 +380,8 @@ impl ModuleBuilder {
         name: &str,
         r#type: T,
         value: Option<&ConstValue>,
-    ) -> GlobalId {
-        let id = GlobalId(self.id, self.symbols.intern(name));
+    ) -> DeclaredGlobalDescriptor {
+        let interned_name = self.symbols.intern(name);
 
         let name = CString::from_str(name).unwrap();
         // SAFETY: the module reference, type and name are all valid pointers for the duration of
@@ -396,9 +395,17 @@ impl ModuleBuilder {
             );
         };
 
-        self.globals.insert(id, global);
+        let descriptor = DeclaredGlobalDescriptor {
+            module_id: self.id,
+            name: interned_name,
+            r#type: r#type.into(),
+            // TODO make it configurable, and actually set it on the global!
+            visibility: Visibility::Export,
+        };
 
-        id
+        self.globals.insert(descriptor, global);
+
+        descriptor
     }
 
     fn build_global_initializers(&mut self) {
@@ -479,11 +486,11 @@ impl ModuleBuilder {
     /// # Panics
     /// If the provided ID is invalid. This most likely means a bug, since globals cannot be in any
     /// way removed.
-    pub fn get_global(&self, id: GlobalId) -> ConstValue {
+    pub fn get_global(&self, id: DeclaredGlobalDescriptor) -> GlobalReference<'_> {
         let result = *self.globals.get(&id).unwrap();
 
         // SAFETY: the global is connected to the current module, so it is valid
-        unsafe { ConstValue::new(result) }
+        GlobalReference { _module: std::marker::PhantomData, reference: result, r#type: id.r#type }
     }
 }
 
