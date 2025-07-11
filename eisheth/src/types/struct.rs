@@ -32,7 +32,7 @@ impl Struct {
             // SAFETY: The context is &'static so must always be valid, the name is a valid pointer
             // for the duration of the call
             .with(|context| unsafe { LLVMStructCreateNamed(context.as_llvm_ref(), name.as_ptr()) });
-        let mut elements: Vec<_> = fields.iter().map(|x| x.as_llvm_ref()).collect();
+        let mut elements: Vec<_> = fields.iter().map(OpaqueType::as_llvm_ref).collect();
 
         // SAFETY: The reference was just created, so it's valid, the elements vector is alive and
         // the length and type match expectations of the method called.

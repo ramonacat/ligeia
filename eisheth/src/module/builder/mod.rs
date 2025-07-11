@@ -1,13 +1,17 @@
 use crate::{
-    context::diagnostic::{DiagnosticHandler, DIAGNOSTIC_HANDLER},
+    context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
     global_symbol::GlobalSymbol,
     module::{
-        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE}, AnyModule, AnyModuleExtensions, DeclaredGlobalDescriptor, GlobalReference
+        AnyModule, AnyModuleExtensions, DeclaredGlobalDescriptor, GlobalReference,
+        builder::global_finalizers::{FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE},
     },
     types::RepresentedAs,
 };
+
+mod functions;
 mod global_finalizers;
 mod global_initializers;
+mod globals;
 
 use std::{
     collections::HashMap,
@@ -23,8 +27,7 @@ use llvm_sys::{
     LLVMLinkage,
     analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
     core::{
-        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeMessage, LLVMDisposeModule, LLVMGetUndef,
-        LLVMModuleCreateWithNameInContext, LLVMSetInitializer, LLVMSetLinkage,
+        LLVMDisposeMessage, LLVMDisposeModule, LLVMModuleCreateWithNameInContext, LLVMSetLinkage,
     },
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
@@ -41,7 +44,7 @@ use crate::{
     module::builder::global_initializers::{GLOBAL_INITIALIZERS_ENTRY_TYPE, InitializersEntryType},
     package::context::PackageContext,
     types::{self, Type},
-    value::{ConstValue, Value},
+    value::ConstValue,
 };
 
 thread_local! {
@@ -104,11 +107,11 @@ pub struct ModuleBuilder {
     id: ModuleId,
     reference: LLVMModuleRef,
     symbols: Rc<GlobalSymbols>,
-    functions: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
     global_initializers: Vec<GlobalInitializerDescriptor>,
     global_finalizers: Vec<GlobalFinalizerDescriptor>,
     global_mappings: HashMap<String, usize>,
-    globals: HashMap<DeclaredGlobalDescriptor, LLVMValueRef>,
+    global_values: HashMap<DeclaredGlobalDescriptor, LLVMValueRef>,
+    function_values: HashMap<DeclaredFunctionDescriptor, LLVMValueRef>,
 }
 
 impl AnyModule for ModuleBuilder {
@@ -135,11 +138,11 @@ impl ModuleBuilder {
             reference: module,
             id: ModuleId(package_context.id(), symbols.intern(name)),
             symbols,
-            functions: HashMap::new(),
             global_initializers: vec![],
             global_finalizers: vec![],
             global_mappings: HashMap::new(),
-            globals: HashMap::new(),
+            global_values: HashMap::new(),
+            function_values: HashMap::new(),
         }
     }
 
@@ -158,23 +161,11 @@ impl ModuleBuilder {
         declaration: &FunctionSignature,
         runtime_function_address: usize,
     ) -> DeclaredFunctionDescriptor {
-        let id = DeclaredFunctionDescriptor {
-            module_id: self.id,
-            name: self.symbols.intern(declaration.name()),
-            r#type: declaration.r#type(),
-            visibility: declaration.visibility(),
-        };
+        let (id, function) = functions::declare_function(self, declaration);
 
-        let name = self.symbols.resolve(id.name);
-        let c_name = CString::from_str(&name).unwrap();
-
-        let function =
-            // SAFETY: All the passed values come from objects which uphold guarantees about the
-            // pointers being valid
-            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
-
-        self.functions.insert(id, function);
-        self.global_mappings.insert(name, runtime_function_address);
+        self.function_values.insert(id, function);
+        self.global_mappings
+            .insert(declaration.name().to_string(), runtime_function_address);
 
         id
     }
@@ -185,21 +176,9 @@ impl ModuleBuilder {
         declaration: &FunctionSignature,
         implement: impl FnOnce(&FunctionBuilder),
     ) -> DeclaredFunctionDescriptor {
-        let id = DeclaredFunctionDescriptor {
-            module_id: self.id,
-            name: self.symbols.intern(declaration.name()),
-            r#type: declaration.r#type(),
-            visibility: declaration.visibility(),
-        };
-        let builder = FunctionBuilder::new(self, declaration);
+        let (id, function) = functions::define_function(self, declaration, implement);
 
-        // TODO we should probably ask the builder to
-        // verify that all blocks got built with at least a terminator
-        implement(&builder);
-
-        let function = builder.build();
-
-        self.functions.insert(id, function);
+        self.function_values.insert(id, function);
 
         id
     }
@@ -261,30 +240,9 @@ impl ModuleBuilder {
         &mut self,
         id: DeclaredFunctionDescriptor,
     ) -> Result<DeclaredFunctionDescriptor, FunctionImportError> {
-        if id.module_id == self.id {
-            return Err(FunctionImportError::DefinedInThisModule(id));
-        }
+        let (id, function) = functions::import_function(self, id)?;
 
-        if id.visibility != Visibility::Export {
-            return Err(FunctionImportError::NotExported(id));
-        }
-
-        let name = self.symbols.resolve(id.name);
-        let c_name = CString::from_str(&name).unwrap();
-
-        let function =
-            // SAFETY: All the passed values come from objects which uphold guarantees about the
-            // pointers being valid
-            unsafe { LLVMAddFunction(self.reference, c_name.as_ptr(), id.r#type.as_llvm_ref()) };
-
-        let id = DeclaredFunctionDescriptor {
-            module_id: self.id,
-            name: id.name,
-            r#type: id.r#type,
-            visibility: Visibility::Internal,
-        };
-
-        self.functions.insert(id, function);
+        self.function_values.insert(id, function);
 
         Ok(id)
     }
@@ -344,7 +302,7 @@ impl ModuleBuilder {
         self.reference = std::ptr::null_mut();
 
         let mut functions = HashMap::new();
-        std::mem::swap(&mut functions, &mut self.functions);
+        std::mem::swap(&mut functions, &mut self.function_values);
 
         let mut global_mappings = HashMap::new();
         std::mem::swap(&mut global_mappings, &mut self.global_mappings);
@@ -365,7 +323,7 @@ impl ModuleBuilder {
         &self,
         function: DeclaredFunctionDescriptor,
     ) -> FunctionReference<'_> {
-        let value = self.functions.get(&function).unwrap();
+        let value = self.function_values.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they
         // belong to this module, so as long as the function reference has a life time at least
@@ -381,29 +339,8 @@ impl ModuleBuilder {
         r#type: T,
         value: Option<&ConstValue>,
     ) -> DeclaredGlobalDescriptor {
-        let interned_name = self.symbols.intern(name);
-
-        let name = CString::from_str(name).unwrap();
-        // SAFETY: the module reference, type and name are all valid pointers for the duration of
-        // the call
-        let global = unsafe { LLVMAddGlobal(self.reference, r#type.as_llvm_ref(), name.as_ptr()) };
-        // SAFETY: We just created the global, and the value must be correct
-        unsafe {
-            LLVMSetInitializer(
-                global,
-                value.map_or_else(|| LLVMGetUndef(r#type.as_llvm_ref()), Value::as_llvm_ref),
-            );
-        };
-
-        let descriptor = DeclaredGlobalDescriptor {
-            module_id: self.id,
-            name: interned_name,
-            r#type: r#type.into(),
-            // TODO make it configurable, and actually set it on the global!
-            visibility: Visibility::Export,
-        };
-
-        self.globals.insert(descriptor, global);
+        let (descriptor, global) = globals::define_global(self, name, r#type, value);
+        self.global_values.insert(descriptor, global);
 
         descriptor
     }
@@ -440,7 +377,7 @@ impl ModuleBuilder {
         // SAFETY: The global was just crated, it's valid
         unsafe {
             LLVMSetLinkage(
-                *self.globals.get(&global).unwrap(),
+                *self.global_values.get(&global).unwrap(),
                 LLVMLinkage::LLVMAppendingLinkage,
             );
         };
@@ -477,7 +414,7 @@ impl ModuleBuilder {
         // SAFETY: The global was just crated, it's valid
         unsafe {
             LLVMSetLinkage(
-                *self.globals.get(&global).unwrap(),
+                *self.global_values.get(&global).unwrap(),
                 LLVMLinkage::LLVMAppendingLinkage,
             );
         };
@@ -486,11 +423,16 @@ impl ModuleBuilder {
     /// # Panics
     /// If the provided ID is invalid. This most likely means a bug, since globals cannot be in any
     /// way removed.
+    #[must_use]
     pub fn get_global(&self, id: DeclaredGlobalDescriptor) -> GlobalReference<'_> {
-        let result = *self.globals.get(&id).unwrap();
+        let result = *self.global_values.get(&id).unwrap();
 
         // SAFETY: the global is connected to the current module, so it is valid
-        GlobalReference { _module: std::marker::PhantomData, reference: result, r#type: id.r#type }
+        GlobalReference {
+            _module: std::marker::PhantomData,
+            reference: result,
+            r#type: id.r#type,
+        }
     }
 }
 

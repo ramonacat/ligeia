@@ -7,7 +7,10 @@ use eisheth::{
 };
 
 use crate::{
-    install_types_initializer, test_program::side, value, vector::{self, ffi::Vector}
+    install_types_initializer,
+    test_program::side,
+    value,
+    vector::{self, ffi::Vector},
 };
 
 pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescriptor {
@@ -35,7 +38,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
         test_type,
     );
 
-    let types:ConstOrDynamicValue = main_module.get_global(types).into();
+    let types: ConstOrDynamicValue = main_module.get_global(types).into();
     // TODO: set the finalized_data_pointer to point at types
     main_module.define_global_finalizer("types", 0, None, |function| {
         let entry = function.create_block("entry");

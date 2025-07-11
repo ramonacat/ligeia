@@ -5,7 +5,7 @@ pub mod pointer;
 pub mod r#struct;
 pub mod void;
 
-use std::{marker::PhantomData};
+use std::marker::PhantomData;
 
 pub use array::Array;
 pub use function::Function;
@@ -58,11 +58,11 @@ impl<T: Type> TypeExtensions for T {
 pub struct OpaqueType(LLVMTypeRef, PhantomData<&'static crate::context::Context>);
 
 impl OpaqueType {
-    pub(crate) unsafe fn new(reference: LLVMTypeRef) -> Self {
+    pub(crate) const unsafe fn new(reference: LLVMTypeRef) -> Self {
         Self(reference, PhantomData)
     }
 
-    pub(crate) fn as_llvm_ref(&self) -> LLVMTypeRef {
+    pub(crate) const fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.0
     }
 }
@@ -70,6 +70,6 @@ impl OpaqueType {
 impl<T: Type> From<T> for OpaqueType {
     fn from(value: T) -> Self {
         // SAFETY: we take the reference from a valid object, and types are never destroyed
-        unsafe { OpaqueType::new(value.as_llvm_ref()) }
+        unsafe { Self::new(value.as_llvm_ref()) }
     }
 }

@@ -1,6 +1,8 @@
-use eisheth::module::DeclaredGlobalDescriptor;
-use eisheth::value::ConstOrDynamicValue;
-use eisheth::{module::builder::ModuleBuilder, types::TypeExtensions};
+use eisheth::{
+    module::{DeclaredGlobalDescriptor, builder::ModuleBuilder},
+    types::TypeExtensions,
+    value::ConstOrDynamicValue,
+};
 
 mod test_program;
 mod value;
@@ -51,8 +53,8 @@ fn install_types_initializer(
     types: DeclaredGlobalDescriptor,
     test_type: DeclaredGlobalDescriptor,
 ) {
-    let types:ConstOrDynamicValue = main_module.get_global(types).into();
-    let test_type:ConstOrDynamicValue = main_module.get_global(test_type).into();
+    let types: ConstOrDynamicValue = main_module.get_global(types).into();
+    let test_type: ConstOrDynamicValue = main_module.get_global(test_type).into();
 
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
     main_module.define_global_initializer("types", 0, None, |function| {

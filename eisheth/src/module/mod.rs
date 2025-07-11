@@ -8,11 +8,13 @@ use llvm_sys::{
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
 
-use crate::{types::OpaqueType, value::{ConstOrDynamicValue, ConstValue}};
-
 use super::{
     function::declaration::Visibility, global_symbol::GlobalSymbol, package::id::PackageId,
     types::function::Function,
+};
+use crate::{
+    types::OpaqueType,
+    value::{ConstOrDynamicValue, ConstValue},
 };
 
 pub(crate) trait AnyModule {
@@ -73,17 +75,17 @@ pub struct GlobalReference<'module> {
     r#type: OpaqueType,
 }
 
-impl Into<ConstValue> for GlobalReference<'_> {
-    fn into(self) -> ConstValue {
-        // SAFETY we kept the reference to the module, so it must still be live, which means the
+impl From<GlobalReference<'_>> for ConstValue {
+    fn from(val: GlobalReference<'_>) -> Self {
+        // SAFETY: we kept the reference to the module, so it must still be live, which means the
         // global exists
-        unsafe { ConstValue::new(self.reference) }
+        unsafe { Self::new(val.reference) }
     }
 }
 
 impl From<GlobalReference<'_>> for ConstOrDynamicValue {
     fn from(value: GlobalReference<'_>) -> Self {
-        let value:ConstValue = value.into();
+        let value: ConstValue = value.into();
 
         value.into()
     }
