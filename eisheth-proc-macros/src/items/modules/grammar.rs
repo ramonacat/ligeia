@@ -1,5 +1,5 @@
 use syn::{
-    BareFnArg, Ident, ReturnType, Token, braced, parenthesized,
+    BareFnArg, Ident, ReturnType, Token, Type, braced, parenthesized,
     parse::Parse,
     punctuated::Punctuated,
     token::{Brace, Caret, Colon, Paren},
@@ -123,7 +123,6 @@ impl Parse for BuilderFunctionDefinition {
 }
 
 pub struct ModuleFunctionDeclaration {
-    pub visibility: Visibility,
     pub name: Ident,
     pub _colon: Colon,
     pub contents: ModuleFunctionDefinition,
@@ -132,7 +131,6 @@ pub struct ModuleFunctionDeclaration {
 impl Parse for ModuleFunctionDeclaration {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            visibility: input.parse()?,
             name: input.parse()?,
             _colon: input.parse()?,
             contents: input.parse()?,
@@ -140,11 +138,61 @@ impl Parse for ModuleFunctionDeclaration {
     }
 }
 
+#[allow(unused)]
+pub struct GlobalDeclaration {
+    pub _global: keywords::global,
+    pub name: Ident,
+    pub _colon: Colon,
+    pub r#type: Type,
+}
+
+impl Parse for GlobalDeclaration {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            _global: input.parse()?,
+            name: input.parse()?,
+            _colon: input.parse()?,
+            r#type: input.parse()?,
+        })
+    }
+}
+
+pub enum ModuleItemKind {
+    Function(ModuleFunctionDeclaration),
+    Global(GlobalDeclaration),
+}
+
+impl Parse for ModuleItemKind {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let lookahead = input.lookahead1();
+
+        if lookahead.peek(keywords::global) {
+            Ok(Self::Global(input.parse()?))
+        } else {
+            Ok(Self::Function(input.parse()?))
+        }
+    }
+}
+
+pub struct ModuleItem {
+    pub visibility: Visibility,
+    pub kind: ModuleItemKind,
+}
+
+impl Parse for ModuleItem {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            visibility: input.parse()?,
+            kind: input.parse()?,
+        })
+    }
+}
+
 pub(super) struct DefineModuleInput {
     pub _module: keywords::module,
     pub name: Ident,
-    pub _functions_brackets: Brace,
-    pub functions: Punctuated<ModuleFunctionDeclaration, Token![;]>,
+    pub _items_brackets: Brace,
+    pub items: Punctuated<ModuleItem, Token![;]>,
 }
 
 impl Parse for DefineModuleInput {
@@ -154,8 +202,8 @@ impl Parse for DefineModuleInput {
         Ok(Self {
             _module: input.parse()?,
             name: input.parse()?,
-            _functions_brackets: braced!(content in input),
-            functions: content.parse_terminated(ModuleFunctionDeclaration::parse, Token![;])?,
+            _items_brackets: braced!(content in input),
+            items: content.parse_terminated(ModuleItem::parse, Token![;])?,
         })
     }
 }
@@ -163,9 +211,10 @@ impl Parse for DefineModuleInput {
 mod keywords {
     use syn::custom_keyword;
 
-    custom_keyword!(runtime);
     custom_keyword!(builder);
-    custom_keyword!(module);
-    custom_keyword!(internal);
     custom_keyword!(export);
+    custom_keyword!(global);
+    custom_keyword!(internal);
+    custom_keyword!(module);
+    custom_keyword!(runtime);
 }

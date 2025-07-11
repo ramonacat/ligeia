@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     types::OpaqueType,
-    value::{ConstOrDynamicValue, ConstValue},
+    value::{ConstOrDynamicValue, ConstValue, ValueReference},
 };
 
 pub(crate) trait AnyModule {
@@ -65,6 +65,19 @@ pub struct DeclaredGlobalDescriptor {
     name: GlobalSymbol,
     r#type: OpaqueType,
     visibility: Visibility,
+}
+
+impl ValueReference for DeclaredGlobalDescriptor {
+    fn value(&self, module: &builder::ModuleBuilder) -> ConstOrDynamicValue {
+        module.get_global(*self).into()
+    }
+}
+
+impl DeclaredGlobalDescriptor {
+    #[must_use]
+    pub const fn r#type(&self) -> OpaqueType {
+        self.r#type
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

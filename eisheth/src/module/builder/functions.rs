@@ -14,7 +14,6 @@ use crate::{
     types::Type as _,
 };
 
-// TODO use declare_function here to simplify the insides
 pub fn define_function(
     module: &ModuleBuilder,
     declaration: &FunctionSignature,

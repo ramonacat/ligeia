@@ -13,8 +13,8 @@ use super::{block::FunctionBlock, builder::FunctionBuilder};
 use crate::{
     context::LLVM_CONTEXT,
     module::{DeclaredFunctionDescriptor, builder::ModuleBuilder},
-    types::Type,
-    value::{ConstOrDynamicValue, DynamicValue, Value},
+    types::{OpaqueType, Type},
+    value::{ConstOrDynamicValue, DynamicValue, Value, ValueReference},
 };
 
 #[non_exhaustive]
@@ -43,7 +43,7 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn add<TLeft: Value, TRight: Value>(
+    pub fn add<TLeft: ValueReference, TRight: ValueReference>(
         &self,
         left: TLeft,
         right: TRight,
@@ -56,8 +56,8 @@ impl<'module> InstructionBuilder<'module> {
         let value = unsafe {
             LLVMBuildAdd(
                 self.builder,
-                left.as_llvm_ref(),
-                right.as_llvm_ref(),
+                left.value(self.module()).as_llvm_ref(),
+                right.value(self.module()).as_llvm_ref(),
                 name.as_ptr(),
             )
         };
@@ -106,7 +106,7 @@ impl<'module> InstructionBuilder<'module> {
 
     /// # Panics
     /// Can panic if the name cannot be converted to a `CString`
-    pub fn malloc_array<TLength: Value, TValue: Type>(
+    pub fn malloc_array<TLength: ValueReference, TValue: Type>(
         &self,
         r#type: TValue,
         length: TLength,
@@ -118,7 +118,7 @@ impl<'module> InstructionBuilder<'module> {
             LLVMBuildArrayMalloc(
                 self.builder,
                 r#type.as_llvm_ref(),
-                length.as_llvm_ref(),
+                length.value(self.module()).as_llvm_ref(),
                 name.as_ptr(),
             )
         };
@@ -127,20 +127,24 @@ impl<'module> InstructionBuilder<'module> {
         unsafe { DynamicValue::new(value) }
     }
 
-    pub fn store<TTarget: Value, TValue: Value>(&self, target_pointer: TTarget, value: TValue) {
+    pub fn store<TTarget: ValueReference, TValue: ValueReference>(
+        &self,
+        target_pointer: TTarget,
+        value: TValue,
+    ) {
         // SAFETY: All the pointers come from safe wrappers that ensure they're valid
         unsafe {
             LLVMBuildStore(
                 self.builder,
-                value.as_llvm_ref(),
-                target_pointer.as_llvm_ref(),
+                value.value(self.module()).as_llvm_ref(),
+                target_pointer.value(self.module()).as_llvm_ref(),
             )
         };
     }
 
     /// # Panics
     /// Will panic if the name cannpt be converted to a `CString`
-    pub fn load<TPointer: Value, TValue: Type>(
+    pub fn load<TPointer: ValueReference, TValue: Into<OpaqueType>>(
         &self,
         pointer: TPointer,
         r#type: TValue,
@@ -151,8 +155,8 @@ impl<'module> InstructionBuilder<'module> {
         let result = unsafe {
             LLVMBuildLoad2(
                 self.builder,
-                r#type.as_llvm_ref(),
-                pointer.as_llvm_ref(),
+                r#type.into().as_llvm_ref(),
+                pointer.value(self.module()).as_llvm_ref(),
                 name.as_ptr(),
             )
         };

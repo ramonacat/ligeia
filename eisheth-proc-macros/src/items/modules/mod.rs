@@ -9,6 +9,7 @@ use crate::{
         DefineModuleInput, FunctionArgument, FunctionSignatureDescriptor, ModuleFunctionDefinition,
         Visibility,
     },
+    types::rust_type_to_eisheth_type_instance,
 };
 
 mod grammar;
@@ -88,8 +89,8 @@ fn make_module_function_definition(
                     |function| {
                         builder::#name(
                             function,
-                            #(#import_arguments),*
-                            #(#argument_getters),*
+                            #(#import_arguments,)*
+                            #(#argument_getters,)*
                         );
                     }
                 );
@@ -255,40 +256,79 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
 
     let name_str = content.name.to_string();
 
-    let definition_fields = content.functions.iter().map(|x| {
-        let name = &x.name;
+    let definition_fields = content.items.iter().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => {
+            let name = &f.name;
 
-        quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
+            quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
+        }
+        grammar::ModuleItemKind::Global(g) => {
+            let name = &g.name;
+
+            quote! { #name: ::eisheth::module::DeclaredGlobalDescriptor }
+        }
     });
 
     let exported_functions = content
-        .functions
+        .items
         .iter()
         .filter(|x| x.visibility == Visibility::Export);
 
-    let function_imports = exported_functions.clone().map(|x| {
-        let name = &x.name;
+    let function_imports = exported_functions.clone().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => {
+            let name = &f.name;
 
-        quote! { let #name = module.import_function(self.#name).unwrap(); }
+            quote! { let #name = module.import_function(self.#name).unwrap(); }
+        }
+        grammar::ModuleItemKind::Global(g) => {
+            let name = &g.name;
+
+            quote! { let #name = module.import_global(self.#name).unwrap(); }
+        }
     });
 
-    let imported_function_names = exported_functions.clone().map(|x| &x.name);
+    let imported_function_names = exported_functions.clone().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => &f.name,
+        grammar::ModuleItemKind::Global(g) => &g.name,
+    });
 
-    let function_definitions = content
-        .functions
-        .iter()
-        .map(|x| make_module_function_definition(x.visibility, &x.name, &x.contents));
+    let function_definitions = content.items.iter().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => {
+            make_module_function_definition(x.visibility, &f.name, &f.contents)
+        }
+        grammar::ModuleItemKind::Global(g) => {
+            let name = &g.name;
+            let name_str = name.to_string();
+            let r#type = rust_type_to_eisheth_type_instance(&g.r#type);
 
-    let function_names = content.functions.iter().map(|x| &x.name);
+            quote! {
+                // TODO support setting a const initializer
+                let #name = module.define_global(#name_str, #r#type, None);
+            }
+        }
+    });
 
-    let module_function_callers = exported_functions
-        .clone()
-        .map(|x| make_module_function_caller(&x.name, &x.contents));
+    let function_names = content.items.iter().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => &f.name,
+        grammar::ModuleItemKind::Global(g) => &g.name,
+    });
 
-    let imported_definition_fields = exported_functions.clone().map(|x| {
-        let name = &x.name;
+    let module_function_callers = exported_functions.clone().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => make_module_function_caller(&f.name, &f.contents),
+        grammar::ModuleItemKind::Global(g) => make_global_access_methods(g),
+    });
 
-        quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
+    let imported_definition_fields = exported_functions.clone().map(|x| match &x.kind {
+        grammar::ModuleItemKind::Function(f) => {
+            let name = &f.name;
+
+            quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor }
+        }
+        grammar::ModuleItemKind::Global(g) => {
+            let name = &g.name;
+
+            quote! { #name: ::eisheth::module::DeclaredGlobalDescriptor }
+        }
     });
 
     quote! {
@@ -326,4 +366,31 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
             #(#module_function_callers)*
         }
     }.into()
+}
+
+fn make_global_access_methods(
+    declaration: &grammar::GlobalDeclaration,
+) -> proc_macro2::TokenStream {
+    let name = &declaration.name;
+    let name_str = name.to_string();
+
+    let load_name = format_ident!("load_{}", name);
+    let store_name = format_ident!("load_{}", name);
+
+    quote! {
+        pub fn #load_name(
+            &self,
+            i: &::eisheth::function::instruction_builder::InstructionBuilder
+        ) -> DynamicValue {
+            i.load(self.#name.into(), self.#name.r#type(), #name_str)
+        }
+
+        pub fn #store_name<TValue: ::eisheth::value::Value>(
+            &self,
+            i: &::eisheth::function::instruction_builder::InstructionBuilder,
+            value: TValue
+        ) {
+            i.store(self.#name.into(), value);
+        }
+    }
 }

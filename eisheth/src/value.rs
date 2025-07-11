@@ -1,7 +1,22 @@
 use llvm_sys::{core::LLVMIsConstant, prelude::LLVMValueRef};
 
+use crate::module::builder::ModuleBuilder;
+
 pub trait Value: Copy {
     fn as_llvm_ref(&self) -> LLVMValueRef;
+}
+
+pub trait ValueReference: Copy {
+    fn value(&self, module: &ModuleBuilder) -> ConstOrDynamicValue;
+}
+
+impl<T: Value> ValueReference for T
+where
+    ConstOrDynamicValue: From<T>,
+{
+    fn value(&self, _module: &ModuleBuilder) -> ConstOrDynamicValue {
+        (*self).into()
+    }
 }
 
 #[must_use]
