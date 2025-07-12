@@ -179,6 +179,12 @@ pub struct ModuleItem {
     pub kind: ModuleItemKind,
 }
 
+impl ModuleItem {
+    pub fn is_exported(&self) -> bool {
+        self.visibility == Visibility::Export
+    }
+}
+
 impl Parse for ModuleItem {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
