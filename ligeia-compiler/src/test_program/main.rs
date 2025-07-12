@@ -46,15 +46,23 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     );
 
     let types: ConstOrDynamicValue = main_module.get_global(types).into();
-    // TODO: set the finalized_data_pointer to point at types
-    main_module.define_global_finalizer("types", 0, None, |function| {
-        let entry = function.create_block("entry");
-        entry.build(|i| {
-            vector_definition_in_main.finalizer(&i, types);
+    let types_finalizer = main_module.define_function(
+        &FunctionSignature::new(
+            "types_finalizer",
+            types::Function::new(<() as RepresentedAs>::representation(), &[]),
+            Visibility::Export,
+        ),
+        |function| {
+            let entry = function.create_block("entry");
+            entry.build(|i| {
+                vector_definition_in_main.finalizer(&i, types);
 
-            i.return_void()
-        });
-    });
+                i.return_void()
+            });
+        },
+    );
+    // TODO: set the finalized_data_pointer to point at types
+    main_module.define_global_finalizer(0, None, types_finalizer);
 
     let other = main_module.define_function(
         &FunctionSignature::new(
@@ -87,7 +95,6 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
             entry.build(|i| {
                 let important_number = exported_globals_in_main.get_important_number(&i);
                 let base: ConstValue = 32u64.into();
-                i.store(important_number, base);
                 let sum = i.add(base, function.get_argument(0).unwrap(), "add");
                 let arg: ConstValue = 2u64.into();
                 let value_from_other = i.direct_call(other, &[arg.into()], "calling_other");

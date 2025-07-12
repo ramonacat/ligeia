@@ -6,10 +6,9 @@ use crate::{
         builder::{
             errors::{FunctionImportError, ModuleBuildError},
             global_finalizers::{
-                FinalizersEntryType, GLOBAL_FINALIZER_TYPE, GLOBAL_FINALIZERS_ENTRY_TYPE,
-                GlobalFinalizerDescriptor,
+                FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE, GlobalFinalizerDescriptor,
             },
-            global_initializers::{GLOBAL_INITIALIZER_TYPE, GlobalInitializerDescriptor},
+            global_initializers::GlobalInitializerDescriptor,
         },
     },
 };
@@ -136,48 +135,28 @@ impl ModuleBuilder {
 
     pub fn define_global_initializer(
         &mut self,
-        name: &str,
         priority: u32,
         initialized_data_pointer: Option<ConstValue>,
-        implement: impl FnOnce(&FunctionBuilder),
+        initializer: DeclaredFunctionDescriptor,
     ) {
-        let function = GLOBAL_INITIALIZER_TYPE.with(|initializer| {
-            self.define_function(
-                &FunctionSignature::new(
-                    format!("global_initializer_{name}"),
-                    *initializer,
-                    Visibility::Internal,
-                ),
-                implement,
-            )
-        });
+        // TODO verify function's signatrure?
         self.global_initializers.push(GlobalInitializerDescriptor {
             priority,
-            function,
+            function: initializer,
             initialized_data_pointer,
         });
     }
 
     pub fn define_global_finalizer(
         &mut self,
-        name: &str,
         priority: u32,
         finalized_data_pointer: Option<ConstValue>,
-        implement: impl FnOnce(&FunctionBuilder),
+        finalizer: DeclaredFunctionDescriptor,
     ) {
-        let function = GLOBAL_FINALIZER_TYPE.with(|initializer| {
-            self.define_function(
-                &FunctionSignature::new(
-                    format!("global_finalizer_{name}"),
-                    *initializer,
-                    Visibility::Internal,
-                ),
-                implement,
-            )
-        });
+        // TODO verify function's signatrure?
         self.global_finalizers.push(GlobalFinalizerDescriptor {
             priority,
-            function,
+            function: finalizer,
             finalized_data_pointer,
         });
     }

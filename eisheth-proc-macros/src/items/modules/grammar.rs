@@ -1,8 +1,8 @@
 use syn::{
-    BareFnArg, Ident, ReturnType, Token, Type, braced, parenthesized,
+    BareFnArg, Ident, LitInt, ReturnType, Token, Type, braced, parenthesized,
     parse::Parse,
     punctuated::Punctuated,
-    token::{Brace, Caret, Colon, Paren},
+    token::{Brace, Caret, Colon, Comma, Paren},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -157,9 +157,71 @@ impl Parse for GlobalDeclaration {
     }
 }
 
+pub struct GlobalInitializerDeclaration {
+    pub _global_initializer: keywords::global_initializer,
+    pub _colon: Colon,
+    pub priority: LitInt,
+    pub _comma1: Comma,
+    pub initializer_fn: Ident,
+    pub data_pointer: Option<(Comma, Ident)>,
+}
+
+impl Parse for GlobalInitializerDeclaration {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            _global_initializer: input.parse()?,
+            _colon: input.parse()?,
+            priority: input.parse()?,
+            _comma1: input.parse()?,
+            initializer_fn: input.parse()?,
+            data_pointer: {
+                let lookahead = input.lookahead1();
+
+                if lookahead.peek(Comma) {
+                    Some((input.parse()?, input.parse()?))
+                } else {
+                    None
+                }
+            },
+        })
+    }
+}
+
+pub struct GlobalFinalizerDeclaration {
+    pub _global_finalizer: keywords::global_finalizer,
+    pub _colon: Colon,
+    pub priority: LitInt,
+    pub _comma1: Comma,
+    pub finalizer_fn: Ident,
+    pub data_pointer: Option<(Comma, Ident)>,
+}
+
+impl Parse for GlobalFinalizerDeclaration {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            _global_finalizer: input.parse()?,
+            _colon: input.parse()?,
+            priority: input.parse()?,
+            _comma1: input.parse()?,
+            finalizer_fn: input.parse()?,
+            data_pointer: {
+                let lookahead = input.lookahead1();
+
+                if lookahead.peek(Comma) {
+                    Some((input.parse()?, input.parse()?))
+                } else {
+                    None
+                }
+            },
+        })
+    }
+}
+
 pub enum ModuleItemKind {
     Function(ModuleFunctionDeclaration),
     Global(GlobalDeclaration),
+    GlobalInitializer(GlobalInitializerDeclaration),
+    GlobalFinalizer(GlobalFinalizerDeclaration),
 }
 
 impl Parse for ModuleItemKind {
@@ -168,6 +230,10 @@ impl Parse for ModuleItemKind {
 
         if lookahead.peek(keywords::global) {
             Ok(Self::Global(input.parse()?))
+        } else if lookahead.peek(keywords::global_initializer) {
+            Ok(Self::GlobalInitializer(input.parse()?))
+        } else if lookahead.peek(keywords::global_finalizer) {
+            Ok(Self::GlobalFinalizer(input.parse()?))
         } else {
             Ok(Self::Function(input.parse()?))
         }
@@ -223,4 +289,6 @@ mod keywords {
     custom_keyword!(internal);
     custom_keyword!(module);
     custom_keyword!(runtime);
+    custom_keyword!(global_initializer);
+    custom_keyword!(global_finalizer);
 }

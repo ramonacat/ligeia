@@ -1,6 +1,7 @@
 use eisheth::{
+    function::declaration::{FunctionSignature, Visibility},
     module::{DeclaredGlobalDescriptor, builder::ModuleBuilder},
-    types::TypeExtensions,
+    types::{self, RepresentedAs, TypeExtensions},
     value::ConstOrDynamicValue,
 };
 
@@ -57,27 +58,35 @@ fn install_types_initializer(
     let test_type: ConstOrDynamicValue = main_module.get_global(test_type).into();
 
     // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
-    main_module.define_global_initializer("types", 0, None, |function| {
-        let entry = function.create_block("entry");
-        entry.build(|i| {
-            vector_definition_in_main.initializer(&i, types, Value::r#type().sizeof());
+    let types_initializer = main_module.define_function(
+        &FunctionSignature::new(
+            "types_initializer",
+            types::Function::new(<() as RepresentedAs>::representation(), &[]),
+            Visibility::Export,
+        ),
+        |function| {
+            let entry = function.create_block("entry");
+            entry.build(|i| {
+                vector_definition_in_main.initializer(&i, types, Value::r#type().sizeof());
 
-            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
 
-            value_definition_in_main.debug_print(&i, pointer);
+                value_definition_in_main.debug_print(&i, pointer);
 
-            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
 
-            value_definition_in_main.debug_print(&i, pointer);
+                value_definition_in_main.debug_print(&i, pointer);
 
-            let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-            value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
+                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
 
-            value_definition_in_main.debug_print(&i, pointer);
+                value_definition_in_main.debug_print(&i, pointer);
 
-            i.return_void()
-        });
-    });
+                i.return_void()
+            });
+        },
+    );
+    main_module.define_global_initializer(0, None, types_initializer);
 }

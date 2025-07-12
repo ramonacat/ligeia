@@ -16,6 +16,7 @@ use llvm_sys::{
 };
 pub use pointer::Pointer;
 pub use r#struct::Struct;
+pub use void::Void;
 
 use crate::value::ConstValue;
 

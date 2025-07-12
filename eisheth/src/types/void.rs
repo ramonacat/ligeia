@@ -9,18 +9,18 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub struct VoidType {
+pub struct Void {
     reference: LLVMTypeRef,
     _context: PhantomData<&'static Context>,
 }
 
-impl Type for VoidType {
+impl Type for Void {
     fn as_llvm_ref(&self) -> LLVMTypeRef {
         self.reference
     }
 }
 
-impl VoidType {
+impl Void {
     fn new() -> Self {
         let reference =
             // SAFETY: We know the context is &'static so this is safe
@@ -33,11 +33,11 @@ impl VoidType {
 }
 
 thread_local! {
-    static VOID_TYPE:VoidType = VoidType::new();
+    static VOID_TYPE:Void = Void::new();
 }
 
 impl RepresentedAs for () {
-    type RepresentationType = VoidType;
+    type RepresentationType = Void;
 
     fn representation() -> Self::RepresentationType {
         VOID_TYPE.with(|void| *void)
