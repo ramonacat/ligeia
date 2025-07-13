@@ -185,7 +185,7 @@ impl ModuleBuilder {
         id
     }
 
-    pub(crate) fn build(mut self) -> Result<Module, ModuleBuildError> {
+    pub(crate) fn build(mut self) -> Result<(String, Module), ModuleBuildError> {
         self.build_global_initializers();
         self.build_global_finalizers();
 
@@ -224,16 +224,15 @@ impl ModuleBuilder {
             });
         }
 
+        let mut message = String::new();
+
         if !out_message.is_null() {
             // SAFETY: We've checked that the message was set to something, so it must be a valid
             // string
-            let message = unsafe { CStr::from_ptr(out_message).to_str().unwrap().to_string() };
+            message = unsafe { CStr::from_ptr(out_message).to_str().unwrap().to_string() };
 
             // SAFETY: This pointer won't be used anymore, safe to dispose
             unsafe { LLVMDisposeMessage(out_message) };
-
-            // TODO we should probably return the message to the user instead of just printing
-            eprintln!("{message}");
         }
 
         let reference = self.reference;
@@ -246,7 +245,7 @@ impl ModuleBuilder {
         std::mem::swap(&mut global_mappings, &mut self.global_mappings);
 
         // SAFETY: We have ensured that the reference is not owned by this current object
-        Ok(unsafe {
+        Ok((message.trim().to_string(), unsafe {
             Module::new(
                 self.id,
                 reference,
@@ -254,7 +253,7 @@ impl ModuleBuilder {
                 self.symbols.clone(),
                 global_mappings,
             )
-        })
+        }))
     }
 
     /// # Panics

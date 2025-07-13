@@ -50,6 +50,23 @@ impl Display for PackageBuildError {
     }
 }
 
+pub struct PackageBuildResult {
+    messages: HashMap<String, String>,
+    package: Package,
+}
+
+impl PackageBuildResult {
+    #[must_use]
+    pub const fn messages(&self) -> &HashMap<String, String> {
+        &self.messages
+    }
+
+    #[must_use]
+    pub fn into_package(self) -> Package {
+        self.package
+    }
+}
+
 pub struct PackageBuilder {
     context: PackageContext,
     modules: HashMap<String, ModuleBuilder>,
@@ -92,7 +109,7 @@ impl PackageBuilder {
     /// This will error out and return the error for the first module that fails to build.
     /// # Panics
     /// If there are no modules in the package
-    pub fn build(self) -> Result<Package, PackageBuildError> {
+    pub fn build(self) -> Result<PackageBuildResult, PackageBuildError> {
         let module_build_results = self.modules.into_values().map(ModuleBuilder::build);
 
         let mut module_build_errors = vec![];
@@ -111,17 +128,28 @@ impl PackageBuilder {
 
         let ir_per_module: HashMap<String, String> = built_modules
             .iter()
-            .map(|x| (x.name(), x.dump_ir()))
+            .map(|(_, x)| (x.name(), x.dump_ir()))
             .collect();
 
-        let mut final_module = built_modules
+        let (final_module_messages, mut final_module) = built_modules
             .pop()
             .expect("package should contain at least a single module");
 
-        for module in built_modules {
+        let mut messages = HashMap::new();
+        if !final_module_messages.is_empty() {
+            messages.insert(final_module.name(), final_module_messages);
+        }
+
+        for (module_messages, module) in built_modules {
+            if !module_messages.is_empty() {
+                messages.insert(module.name(), module_messages);
+            }
             final_module.link(module).map_err(PackageBuildError::Link)?;
         }
 
-        Ok(Package::new(final_module, ir_per_module))
+        Ok(PackageBuildResult {
+            messages,
+            package: Package::new(final_module, ir_per_module),
+        })
     }
 }

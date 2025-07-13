@@ -28,12 +28,23 @@ fn main() {
     .get_main();
 
     let package = match package_builder.build() {
-        Ok(package) => package,
+        Ok(package) => {
+            if !package.messages().is_empty() {
+                eprintln!("Build messages:");
+
+                for (module, message) in package.messages() {
+                    eprintln!("{module}:\n{message}");
+                }
+            }
+
+            package.into_package()
+        }
         Err(errors) => {
             panic!("Failed to build the modules:\n{errors}");
         }
     };
 
+    // TODO print the IR out to files instead
     for (module_name, raw_ir) in package.ir_per_module() {
         println!("IR for {module_name}:\n{raw_ir}");
     }
