@@ -7,7 +7,7 @@ use crate::items::modules::{
     global_finalizers::make_global_finalizer,
     global_initializers::make_global_initializer,
     globals::{make_global_declaration, make_global_getter},
-    grammar::{DefineModuleInput, ModuleItem},
+    grammar::{DefineModuleInput, Item},
 };
 
 mod functions;
@@ -17,48 +17,45 @@ mod globals;
 mod grammar;
 
 fn make_definition_struct<'a>(
-    items: impl Iterator<Item = &'a ModuleItem> + Clone,
+    items: impl Iterator<Item = &'a Item> + Clone,
 ) -> proc_macro2::TokenStream {
     let definition_fields = items.clone().filter_map(|x| match &x.kind {
-        grammar::ModuleItemKind::Function(f) => {
+        grammar::ItemKind::Function(f) => {
             let name = &f.name;
 
             Some(quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor })
         }
-        grammar::ModuleItemKind::Global(g) => {
+        grammar::ItemKind::Global(g) => {
             let name = &g.name;
 
             Some(quote! { #name: ::eisheth::module::DeclaredGlobalDescriptor })
         }
-        grammar::ModuleItemKind::GlobalInitializer(_)
-        | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+        grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
     });
 
     let item_imports = items
         .clone()
         .filter(|x| x.is_exported())
         .filter_map(|x| match &x.kind {
-            grammar::ModuleItemKind::Function(f) => {
+            grammar::ItemKind::Function(f) => {
                 let name = &f.name;
 
                 Some(quote! { let #name = module.import_function(self.#name).unwrap(); })
             }
-            grammar::ModuleItemKind::Global(g) => {
+            grammar::ItemKind::Global(g) => {
                 let name = &g.name;
 
                 Some(quote! { let #name = module.import_global(self.#name); })
             }
-            grammar::ModuleItemKind::GlobalInitializer(_)
-            | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+            grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
         });
 
     let imported_item_names = items
         .filter(|x| x.is_exported())
         .filter_map(|x| match &x.kind {
-            grammar::ModuleItemKind::Function(f) => Some(&f.name),
-            grammar::ModuleItemKind::Global(g) => Some(&g.name),
-            grammar::ModuleItemKind::GlobalInitializer(_)
-            | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+            grammar::ItemKind::Function(f) => Some(&f.name),
+            grammar::ItemKind::Global(g) => Some(&g.name),
+            grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
         });
 
     quote! {
@@ -83,25 +80,24 @@ fn make_definition_struct<'a>(
 
 fn make_define_function<'a>(
     module_name: &Ident,
-    items: impl Iterator<Item = &'a ModuleItem> + Clone,
+    items: impl Iterator<Item = &'a Item> + Clone,
 ) -> proc_macro2::TokenStream {
     let name_str = module_name.to_string();
 
     let item_names = items.clone().filter_map(|x| match &x.kind {
-        grammar::ModuleItemKind::Function(f) => Some(&f.name),
-        grammar::ModuleItemKind::Global(g) => Some(&g.name),
-        grammar::ModuleItemKind::GlobalInitializer(_)
-        | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+        grammar::ItemKind::Function(f) => Some(&f.name),
+        grammar::ItemKind::Global(g) => Some(&g.name),
+        grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
     });
 
     let item_definitions = items.map(|x| match &x.kind {
-        grammar::ModuleItemKind::Function(f) => {
+        grammar::ItemKind::Function(f) => {
             // TODO pass &f as a whole instead of name and contents separately
-            make_module_function_definition(x.visibility, &f.name, &f.contents)
+            make_module_function_definition(x.visibility, &f.name, &f.kind)
         }
-        grammar::ModuleItemKind::Global(g) => make_global_declaration(x.visibility, g),
-        grammar::ModuleItemKind::GlobalInitializer(gid) => make_global_initializer(gid),
-        grammar::ModuleItemKind::GlobalFinalizer(gfd) => make_global_finalizer(gfd),
+        grammar::ItemKind::Global(g) => make_global_declaration(x.visibility, g),
+        grammar::ItemKind::GlobalInitializer(gid) => make_global_initializer(gid),
+        grammar::ItemKind::GlobalFinalizer(gfd) => make_global_finalizer(gfd),
     });
 
     quote! {
@@ -117,38 +113,40 @@ fn make_define_function<'a>(
 }
 
 fn make_imported_definition_struct<'a>(
-    items: impl Iterator<Item = &'a ModuleItem> + Clone,
+    items: impl Iterator<Item = &'a Item> + Clone,
 ) -> proc_macro2::TokenStream {
     let imported_definition_methods =
         items
             .clone()
             .filter(|x| x.is_exported())
             .filter_map(|x| match &x.kind {
-                grammar::ModuleItemKind::Function(f) => {
+                grammar::ItemKind::Function(f) => {
                     // TODO just pass f as an argument
-                    Some(make_module_function_caller(&f.name, &f.contents))
+                    Some(make_module_function_caller(&f.name, &f.kind))
                 }
-                grammar::ModuleItemKind::Global(g) => Some(make_global_getter(g)),
-                grammar::ModuleItemKind::GlobalInitializer(_)
-                | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+                grammar::ItemKind::Global(g) => Some(make_global_getter(g)),
+                grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => {
+                    None
+                }
             });
 
     let imported_definition_fields =
         items
             .filter(|x| x.is_exported())
             .filter_map(|x| match &x.kind {
-                grammar::ModuleItemKind::Function(f) => {
+                grammar::ItemKind::Function(f) => {
                     let name = &f.name;
 
                     Some(quote! { #name: ::eisheth::module::DeclaredFunctionDescriptor })
                 }
-                grammar::ModuleItemKind::Global(g) => {
+                grammar::ItemKind::Global(g) => {
                     let name = &g.name;
 
                     Some(quote! { #name: ::eisheth::module::DeclaredGlobalDescriptor })
                 }
-                grammar::ModuleItemKind::GlobalInitializer(_)
-                | grammar::ModuleItemKind::GlobalFinalizer(_) => None,
+                grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => {
+                    None
+                }
             });
     quote! {
         pub struct ImportedDefinition {

@@ -29,12 +29,12 @@ impl Parse for Visibility {
     }
 }
 
-pub struct BuilderFunctionImport {
+pub struct ItemImport {
     _caret: Caret,
     pub name: Ident,
 }
 
-impl Parse for BuilderFunctionImport {
+impl Parse for ItemImport {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             _caret: input.parse()?,
@@ -44,7 +44,7 @@ impl Parse for BuilderFunctionImport {
 }
 
 pub enum FunctionArgument {
-    Import(BuilderFunctionImport),
+    Import(ItemImport),
     Arg(Box<BareFnArg>),
 }
 
@@ -58,13 +58,13 @@ impl Parse for FunctionArgument {
     }
 }
 
-pub(super) struct FunctionSignatureDescriptor {
+pub(super) struct FunctionSignature {
     pub _argument_parens: Paren,
     pub arguments: Punctuated<FunctionArgument, Token![,]>,
     pub return_type: ReturnType,
 }
 
-impl Parse for FunctionSignatureDescriptor {
+impl Parse for FunctionSignature {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let arguments;
         Ok(Self {
@@ -75,12 +75,12 @@ impl Parse for FunctionSignatureDescriptor {
     }
 }
 
-pub enum ModuleFunctionDefinition {
-    Runtime(RuntimeFunctionDefintion),
-    Builder(BuilderFunctionDefinition),
+pub enum FunctionDefinitionKind {
+    Runtime(RuntimeFunctionSignature),
+    Builder(BuilderFunctionSignature),
 }
 
-impl Parse for ModuleFunctionDefinition {
+impl Parse for FunctionDefinitionKind {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let lookahead = input.lookahead1();
         if lookahead.peek(keywords::runtime) {
@@ -93,12 +93,12 @@ impl Parse for ModuleFunctionDefinition {
     }
 }
 
-pub struct RuntimeFunctionDefintion {
+pub struct RuntimeFunctionSignature {
     _runtime: keywords::runtime,
-    pub signature: FunctionSignatureDescriptor,
+    pub signature: FunctionSignature,
 }
 
-impl Parse for RuntimeFunctionDefintion {
+impl Parse for RuntimeFunctionSignature {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             _runtime: input.parse()?,
@@ -107,13 +107,13 @@ impl Parse for RuntimeFunctionDefintion {
     }
 }
 
-pub struct BuilderFunctionDefinition {
+pub struct BuilderFunctionSignature {
     _builder: keywords::builder,
 
-    pub signature: FunctionSignatureDescriptor,
+    pub signature: FunctionSignature,
 }
 
-impl Parse for BuilderFunctionDefinition {
+impl Parse for BuilderFunctionSignature {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             _builder: input.parse()?,
@@ -122,23 +122,22 @@ impl Parse for BuilderFunctionDefinition {
     }
 }
 
-pub struct ModuleFunctionDeclaration {
+pub struct FunctionDefinition {
     pub name: Ident,
     pub _colon: Colon,
-    pub contents: ModuleFunctionDefinition,
+    pub kind: FunctionDefinitionKind,
 }
 
-impl Parse for ModuleFunctionDeclaration {
+impl Parse for FunctionDefinition {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             name: input.parse()?,
             _colon: input.parse()?,
-            contents: input.parse()?,
+            kind: input.parse()?,
         })
     }
 }
 
-#[allow(unused)]
 pub struct GlobalDeclaration {
     pub _global: keywords::global,
     pub name: Ident,
@@ -217,14 +216,14 @@ impl Parse for GlobalFinalizerDeclaration {
     }
 }
 
-pub enum ModuleItemKind {
-    Function(ModuleFunctionDeclaration),
+pub enum ItemKind {
+    Function(FunctionDefinition),
     Global(GlobalDeclaration),
     GlobalInitializer(GlobalInitializerDeclaration),
     GlobalFinalizer(GlobalFinalizerDeclaration),
 }
 
-impl Parse for ModuleItemKind {
+impl Parse for ItemKind {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let lookahead = input.lookahead1();
 
@@ -240,18 +239,18 @@ impl Parse for ModuleItemKind {
     }
 }
 
-pub struct ModuleItem {
+pub struct Item {
     pub visibility: Visibility,
-    pub kind: ModuleItemKind,
+    pub kind: ItemKind,
 }
 
-impl ModuleItem {
+impl Item {
     pub fn is_exported(&self) -> bool {
         self.visibility == Visibility::Export
     }
 }
 
-impl Parse for ModuleItem {
+impl Parse for Item {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             visibility: input.parse()?,
@@ -264,7 +263,7 @@ pub(super) struct DefineModuleInput {
     pub _module: keywords::module,
     pub name: Ident,
     pub _items_brackets: Brace,
-    pub items: Punctuated<ModuleItem, Token![;]>,
+    pub items: Punctuated<Item, Token![;]>,
 }
 
 impl Parse for DefineModuleInput {
@@ -275,7 +274,7 @@ impl Parse for DefineModuleInput {
             _module: input.parse()?,
             name: input.parse()?,
             _items_brackets: braced!(content in input),
-            items: content.parse_terminated(ModuleItem::parse, Token![;])?,
+            items: content.parse_terminated(Item::parse, Token![;])?,
         })
     }
 }

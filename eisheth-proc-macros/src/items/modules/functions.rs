@@ -5,17 +5,17 @@ use syn::{Ident, ReturnType};
 use crate::{
     convert_case,
     items::modules::grammar::{
-        self, FunctionArgument, FunctionSignatureDescriptor, ModuleFunctionDefinition, Visibility,
+        self, FunctionArgument, FunctionDefinitionKind, FunctionSignature, Visibility,
     },
 };
 
 pub fn make_module_function_definition(
     visibility: Visibility,
     name: &Ident,
-    definition: &ModuleFunctionDefinition,
+    definition: &FunctionDefinitionKind,
 ) -> proc_macro2::TokenStream {
     match &definition {
-        ModuleFunctionDefinition::Runtime(f) => {
+        FunctionDefinitionKind::Runtime(f) => {
             let argument_types = f
                 .signature
                 .arguments
@@ -43,7 +43,7 @@ pub fn make_module_function_definition(
                 };
             }
         }
-        ModuleFunctionDefinition::Builder(f) => {
+        FunctionDefinitionKind::Builder(f) => {
             let argument_getters = f
                 .signature
                 .arguments
@@ -96,11 +96,11 @@ pub fn make_module_function_definition(
 
 pub fn make_module_function_caller(
     name: &Ident,
-    definition: &ModuleFunctionDefinition,
+    definition: &FunctionDefinitionKind,
 ) -> proc_macro2::TokenStream {
     let (arguments, return_type) = match definition {
-        ModuleFunctionDefinition::Runtime(x) => (&x.signature.arguments, &x.signature.return_type),
-        ModuleFunctionDefinition::Builder(x) => (&x.signature.arguments, &x.signature.return_type),
+        FunctionDefinitionKind::Runtime(x) => (&x.signature.arguments, &x.signature.return_type),
+        FunctionDefinitionKind::Builder(x) => (&x.signature.arguments, &x.signature.return_type),
     };
 
     let argument_type_variables = arguments
@@ -203,9 +203,9 @@ pub fn make_module_function_caller(
 fn make_function_signature(
     visibility: Visibility,
     name: &Ident,
-    signature: &FunctionSignatureDescriptor,
+    signature: &FunctionSignature,
 ) -> proc_macro2::TokenStream {
-    let FunctionSignatureDescriptor {
+    let FunctionSignature {
         _argument_parens: _,
         arguments,
         return_type,
