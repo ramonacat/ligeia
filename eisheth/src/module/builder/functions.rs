@@ -3,10 +3,8 @@ use std::{ffi::CString, str::FromStr as _};
 use llvm_sys::{core::LLVMAddFunction, prelude::LLVMValueRef};
 
 use crate::{
-    function::{
-        builder::FunctionBuilder,
-        declaration::{FunctionSignature, Visibility},
-    },
+    Visibility,
+    function::{builder::FunctionBuilder, declaration::FunctionSignature},
     module::{
         DeclaredFunctionDescriptor,
         builder::{FunctionImportError, ModuleBuilder},

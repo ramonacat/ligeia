@@ -151,7 +151,7 @@ fn make_function_signature(
                     #(<(#arguments) as ::eisheth::types::RepresentedAs>::representation().into()),*
                 ],
             ),
-            ::eisheth::function::declaration::Visibility::#visibility,
+            ::eisheth::Visibility::#visibility,
         )
     }
 }

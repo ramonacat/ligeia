@@ -6,11 +6,9 @@ use llvm_sys::{
     prelude::LLVMValueRef,
 };
 
-use super::{
-    block::FunctionBlock,
-    declaration::{FunctionSignature, Visibility},
-};
+use super::{block::FunctionBlock, declaration::FunctionSignature};
 use crate::{
+    Visibility,
     module::{AnyModule, builder::ModuleBuilder},
     types::{self, Type},
     value::{ConstValue, DynamicValue},

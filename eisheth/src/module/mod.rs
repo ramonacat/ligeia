@@ -8,11 +8,9 @@ use llvm_sys::{
     prelude::{LLVMModuleRef, LLVMValueRef},
 };
 
-use super::{
-    function::declaration::Visibility, global_symbol::GlobalSymbol, package::id::PackageId,
-    types::function::Function,
-};
+use super::{global_symbol::GlobalSymbol, package::id::PackageId, types::function::Function};
 use crate::{
+    Visibility,
     types::OpaqueType,
     value::{ConstOrDynamicValue, ConstValue, ValueReference},
 };

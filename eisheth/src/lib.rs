@@ -9,3 +9,9 @@ pub mod value;
 
 pub use eisheth_proc_macros::{define_module, ffi_enum, ffi_struct};
 pub use llvm_sys;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Visibility {
+    Internal,
+    Export,
+}

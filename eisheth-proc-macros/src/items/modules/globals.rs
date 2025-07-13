@@ -26,7 +26,7 @@ pub fn make_global_declaration(
     quote! {
         // TODO support setting a const initializer
         let #name = module.define_global(
-            ::eisheth::function::declaration::Visibility::#visibility,
+            ::eisheth::Visibility::#visibility,
             #name_str,
             #r#type,
             #value

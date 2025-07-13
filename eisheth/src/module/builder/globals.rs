@@ -6,7 +6,7 @@ use llvm_sys::{
 };
 
 use crate::{
-    function::declaration::Visibility,
+    Visibility,
     module::{DeclaredGlobalDescriptor, builder::ModuleBuilder},
     types::Type,
     value::{ConstValue, Value},

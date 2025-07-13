@@ -1,4 +1,5 @@
 use crate::{
+    Visibility,
     context::diagnostic::{DIAGNOSTIC_HANDLER, DiagnosticHandler},
     global_symbol::GlobalSymbol,
     module::{
@@ -41,7 +42,7 @@ use crate::{
     context::LLVM_CONTEXT,
     function::{
         builder::{FunctionBuilder, FunctionReference},
-        declaration::{FunctionSignature, Visibility},
+        declaration::FunctionSignature,
     },
     global_symbol::GlobalSymbols,
     module::builder::global_initializers::{GLOBAL_INITIALIZERS_ENTRY_TYPE, InitializersEntryType},
