@@ -9,7 +9,7 @@ use llvm_sys::{
 use super::{DeclaredFunctionDescriptor, ModuleId};
 use crate::{
     context::diagnostic::{DIAGNOSTIC_HANDLER, Diagnostic, DiagnosticHandler},
-    function::Function,
+    function::builder::FunctionReference,
     global_symbol::GlobalSymbols,
     module::AnyModule,
 };
@@ -106,13 +106,13 @@ impl Module {
     /// # Panics
     /// If the `FunctionDeclaration` is from another module.
     #[must_use]
-    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> Function<'_> {
+    pub fn get_function(&self, id: DeclaredFunctionDescriptor) -> FunctionReference<'_> {
         assert!(id.module_id == self.id);
 
         let function = self.functions.get(&id).unwrap();
 
         // SAFETY: We got a reference to the function in the HashMap, so it must be valid
-        Function::new(self, *function, id.r#type)
+        unsafe { FunctionReference::new(self, *function, id.r#type) }
     }
 
     pub(crate) fn name(&self) -> String {

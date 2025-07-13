@@ -2,11 +2,8 @@ use proc_macro2::Literal;
 use quote::{format_ident, quote};
 use syn::{Ident, ReturnType};
 
-use crate::{
-    convert_case,
-    items::modules::grammar::{
-        self, FunctionArgument, FunctionDefinitionKind, FunctionSignature, Visibility,
-    },
+use crate::items::modules::grammar::{
+    self, FunctionArgument, FunctionDefinitionKind, FunctionSignature, Visibility,
 };
 
 pub fn make_module_function_definition(
@@ -72,8 +69,15 @@ pub fn make_module_function_definition(
                     }
                 })
                 .map(|x| {
-                    let name = &x.name;
-                    quote! { #name }
+                    if let Some((ident, dot)) = &x.parent {
+                        let name = format_ident!("get_{}", &x.name);
+
+                        quote! { #ident #dot #name() }
+                    } else {
+                        let name = &x.name;
+
+                        quote! { #name }
+                    }
                 });
 
             let signature = make_function_signature(visibility, name, &f.signature);
@@ -94,108 +98,14 @@ pub fn make_module_function_definition(
     }
 }
 
-pub fn make_module_function_caller(
-    name: &Ident,
-    definition: &FunctionDefinitionKind,
-) -> proc_macro2::TokenStream {
-    let (arguments, return_type) = match definition {
-        FunctionDefinitionKind::Runtime(x) => (&x.signature.arguments, &x.signature.return_type),
-        FunctionDefinitionKind::Builder(x) => (&x.signature.arguments, &x.signature.return_type),
-    };
-
-    let argument_type_variables = arguments
-        .iter()
-        .filter_map(|x| {
-            if let FunctionArgument::Arg(a) = x {
-                Some(a)
-            } else {
-                None
-            }
-        })
-        .map(|x| {
-            x.name
-                .as_ref()
-                .expect("Unnamed arguments are not allowed")
-                .0
-                .to_string()
-        })
-        .map(|x| convert_case::snake_to_pascal(&x))
-        .map(|x| format_ident!("T{}", x));
-
-    let fn_arguments = arguments
-        .iter()
-        .filter_map(|x| {
-            if let FunctionArgument::Arg(a) = x {
-                Some(a)
-            } else {
-                None
-            }
-        })
-        .zip(argument_type_variables.clone())
-        .map(|x| {
-            (
-                x.0.name
-                    .as_ref()
-                    .expect("Unnamed arguments are not allowed")
-                    .0
-                    .clone(),
-                x.1,
-            )
-        })
-        .map(|(name, generic_name)| quote! { #name : #generic_name });
-
-    let where_items = argument_type_variables
-        .clone()
-        .map(|x| quote! { ::eisheth::value::ConstOrDynamicValue: From<#x> });
-
-    let where_clause = if arguments.is_empty() {
-        quote! {}
-    } else {
-        quote! {where #(#where_items),*}
-    };
-
-    let argument_names = arguments
-        .iter()
-        .filter_map(|x| {
-            if let FunctionArgument::Arg(a) = x {
-                Some(a)
-            } else {
-                None
-            }
-        })
-        .map(|x| {
-            x.name
-                .as_ref()
-                .expect("Unnamed arguments are not allowed")
-                .0
-                .clone()
-        });
-
-    let name_literal = Literal::string(&name.to_string());
-
-    let body = match return_type {
-        ReturnType::Default => {
-            quote! { let _ = i.direct_call(self.#name, &[#(#argument_names .into()),*], ""); }
-        }
-        ReturnType::Type(_, _) => {
-            quote! {
-                i.direct_call(self.#name, &[#(#argument_names .into()),*], #name_literal)
-            }
-        }
-    };
-
-    let return_type = match return_type {
-        ReturnType::Default => quote! {},
-        ReturnType::Type(_, _) => quote! { -> ::eisheth::value::DynamicValue },
-    };
+pub fn make_module_function_caller(name: &Ident) -> proc_macro2::TokenStream {
+    let getter_name = format_ident!("get_{name}");
 
     quote! {
-        pub fn #name<#(#argument_type_variables),*>(
+        pub fn #getter_name<'module>(
             &self,
-            i: &::eisheth::function::instruction_builder::InstructionBuilder,
-            #(#fn_arguments),*
-        ) #return_type #where_clause {
-            #body
+        ) -> ::eisheth::module::DeclaredFunctionDescriptor {
+            self.#name
         }
     }
 }

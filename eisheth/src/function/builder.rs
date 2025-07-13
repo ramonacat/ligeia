@@ -16,7 +16,7 @@ use crate::{
     value::{ConstValue, DynamicValue},
 };
 
-pub(crate) struct FunctionReference<'module> {
+pub struct FunctionReference<'module> {
     // TODO should this be PhantomData instead? we only care about the lifetime ATM
     _module: &'module dyn AnyModule,
     reference: LLVMValueRef,

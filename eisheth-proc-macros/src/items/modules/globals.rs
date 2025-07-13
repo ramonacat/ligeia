@@ -31,9 +31,8 @@ pub fn make_global_getter(declaration: &grammar::GlobalDeclaration) -> proc_macr
     quote! {
         pub fn #getter_name<'module>(
             &self,
-            i: &'module ::eisheth::function::instruction_builder::InstructionBuilder<'module>
-        ) -> ::eisheth::module::GlobalReference<'module> {
-            i.module().get_global(self.#name)
+        ) -> ::eisheth::module::DeclaredGlobalDescriptor {
+            self.#name
         }
     }
 }

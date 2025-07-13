@@ -20,21 +20,6 @@ pub fn pascal_to_lower_snake(input: &str) -> String {
     pascal_to_snake(input, char::to_lowercase)
 }
 
-pub fn snake_to_pascal(input: &str) -> String {
-    input
-        .split('_')
-        .map(|x| {
-            if x.is_empty() {
-                String::new()
-            } else {
-                let (first, rest) = x.split_at(1);
-
-                format!("{}{}", first.to_uppercase(), rest.to_lowercase())
-            }
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

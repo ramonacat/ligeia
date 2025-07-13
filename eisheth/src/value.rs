@@ -6,7 +6,7 @@ pub trait Value: Copy {
     fn as_llvm_ref(&self) -> LLVMValueRef;
 }
 
-pub trait ValueReference: Copy {
+pub trait ValueReference {
     fn value(&self, module: &ModuleBuilder) -> ConstOrDynamicValue;
 }
 

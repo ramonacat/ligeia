@@ -22,7 +22,7 @@ mod builder {
         let entry = function.create_block("entry");
         entry.build(|i| {
             let value: ConstValue = 1024u64.into();
-            i.store(important_number, value);
+            i.store(&important_number, &value);
 
             i.return_void()
         });
@@ -35,7 +35,7 @@ mod builder {
         let entry = function.create_block("entry");
         entry.build(|i| {
             let value: ConstValue = 0u64.into();
-            i.store(important_number, value);
+            i.store(&important_number, &value);
 
             i.return_void()
         });

@@ -45,8 +45,8 @@ impl<'module> InstructionBuilder<'module> {
     /// Can panic if the name cannot be converted to a `CString`
     pub fn add<TLeft: ValueReference, TRight: ValueReference>(
         &self,
-        left: TLeft,
-        right: TRight,
+        left: &TLeft,
+        right: &TRight,
         name: &str,
     ) -> ConstOrDynamicValue {
         let name = CString::from_str(name).unwrap();
@@ -70,12 +70,16 @@ impl<'module> InstructionBuilder<'module> {
     pub fn direct_call(
         &self,
         function: DeclaredFunctionDescriptor,
-        arguments: &[ConstOrDynamicValue],
+        arguments: &[&dyn ValueReference],
         name: &str,
     ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
         let function = self.module().get_function(function);
-        let mut arguments: Vec<_> = arguments.iter().map(Value::as_llvm_ref).collect();
+        let mut arguments: Vec<_> = arguments
+            .iter()
+            .map(|x| x.value(self.module()))
+            .map(|x| x.as_llvm_ref())
+            .collect();
 
         // SAFETY: we ensured all the references are valid
         let result = unsafe {
@@ -109,7 +113,7 @@ impl<'module> InstructionBuilder<'module> {
     pub fn malloc_array<TLength: ValueReference, TValue: Type>(
         &self,
         r#type: TValue,
-        length: TLength,
+        length: &TLength,
         name: &str,
     ) -> DynamicValue {
         let name = CString::from_str(name).unwrap();
@@ -129,8 +133,8 @@ impl<'module> InstructionBuilder<'module> {
 
     pub fn store<TTarget: ValueReference, TValue: ValueReference>(
         &self,
-        target_pointer: TTarget,
-        value: TValue,
+        target_pointer: &TTarget,
+        value: &TValue,
     ) {
         // SAFETY: All the pointers come from safe wrappers that ensure they're valid
         unsafe {
@@ -146,7 +150,7 @@ impl<'module> InstructionBuilder<'module> {
     /// Will panic if the name cannpt be converted to a `CString`
     pub fn load<TPointer: ValueReference, TValue: Into<OpaqueType>>(
         &self,
-        pointer: TPointer,
+        pointer: &TPointer,
         r#type: TValue,
         name: &str,
     ) -> DynamicValue {

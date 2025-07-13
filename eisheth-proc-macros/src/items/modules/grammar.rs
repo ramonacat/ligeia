@@ -1,8 +1,8 @@
 use syn::{
-    BareFnArg, Ident, LitInt, ReturnType, Token, Type, braced, parenthesized,
+    BareFnArg, Ident, LitInt, Path, ReturnType, Token, Type, braced, parenthesized,
     parse::Parse,
     punctuated::Punctuated,
-    token::{Brace, Caret, Colon, Comma, Paren},
+    token::{Brace, Caret, Colon, Comma, Dot, Paren},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,6 +31,7 @@ impl Parse for Visibility {
 
 pub struct ItemImport {
     _caret: Caret,
+    pub parent: Option<(Ident, Dot)>,
     pub name: Ident,
 }
 
@@ -38,6 +39,13 @@ impl Parse for ItemImport {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         Ok(Self {
             _caret: input.parse()?,
+            parent: {
+                if input.peek2(Dot) {
+                    Some((input.parse()?, input.parse()?))
+                } else {
+                    None
+                }
+            },
             name: input.parse()?,
         })
     }
@@ -259,9 +267,28 @@ impl Parse for Item {
     }
 }
 
+pub(super) struct ImportedModules {
+    pub _import: keywords::import,
+    pub _item_parenthesis: Paren,
+    pub imports: Punctuated<Path, Token![,]>,
+}
+
+impl Parse for ImportedModules {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let content;
+
+        Ok(Self {
+            _import: input.parse()?,
+            _item_parenthesis: parenthesized!(content in input),
+            imports: content.parse_terminated(Path::parse, Comma)?,
+        })
+    }
+}
+
 pub(super) struct DefineModuleInput {
     pub _module: keywords::module,
     pub name: Ident,
+    pub imported_modules: Option<ImportedModules>,
     pub _items_brackets: Brace,
     pub items: Punctuated<Item, Token![;]>,
 }
@@ -273,6 +300,15 @@ impl Parse for DefineModuleInput {
         Ok(Self {
             _module: input.parse()?,
             name: input.parse()?,
+            imported_modules: {
+                let lookahead = input.lookahead1();
+
+                if lookahead.peek(keywords::import) {
+                    Some(input.parse()?)
+                } else {
+                    None
+                }
+            },
             _items_brackets: braced!(content in input),
             items: content.parse_terminated(Item::parse, Token![;])?,
         })
@@ -290,4 +326,5 @@ mod keywords {
     custom_keyword!(runtime);
     custom_keyword!(global_initializer);
     custom_keyword!(global_finalizer);
+    custom_keyword!(import);
 }

@@ -13,13 +13,7 @@ pub fn rust_type_to_eisheth_type_instance(r#type: &Type) -> TokenStream {
         Type::Never(_) => todo!("Never"),
         Type::Paren(_) => todo!("Paren"),
         Type::Path(path) => {
-            if path.qself.is_some() {
-                todo!("path.qself");
-            } else if let Some(ident) = path.path.get_ident() {
-                quote! { < #ident as ::eisheth::types::RepresentedAs >::representation() }
-            } else {
-                todo!("path multiple idents");
-            }
+            quote! { < #path as ::eisheth::types::RepresentedAs >::representation() }
         }
         Type::Ptr(target) => {
             let r#mut = target.mutability;

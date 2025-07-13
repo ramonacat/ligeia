@@ -257,10 +257,10 @@ impl ModuleBuilder {
         })
     }
 
-    pub(crate) fn get_function(
-        &self,
-        function: DeclaredFunctionDescriptor,
-    ) -> FunctionReference<'_> {
+    /// # Panics
+    /// Will panic if the given function is not found in this module
+    #[must_use]
+    pub fn get_function(&self, function: DeclaredFunctionDescriptor) -> FunctionReference<'_> {
         let value = self.function_values.get(&function).unwrap();
 
         // SAFETY: The functions here were transfered from the ModuleBuilder, so we know they

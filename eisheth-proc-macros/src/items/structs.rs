@@ -40,25 +40,39 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
         declaration_fields.push((visibility, name, r#type));
     }
 
+    let representation = generate_representation(&item, &declaration_fields);
+    let represented_as = generate_represented_as(&item, &declaration_fields);
+
+    quote! {
+        #item
+        #represented_as
+        #representation
+    }
+    .into()
+}
+
+fn generate_represented_as(
+    item: &ItemStruct,
+    declaration_fields: &Vec<(&syn::Visibility, &Ident, &syn::Type)>,
+) -> proc_macro2::TokenStream {
+    let name = &item.ident;
+
+    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
+
     let field_types: Vec<_> = declaration_fields
         .iter()
         .map(|x| rust_type_to_eisheth_type_instance(x.2))
         .map(|x| quote! { #x.into() })
         .collect();
 
-    let visibility = &item.vis;
-    let name = &item.ident;
-
     let type_static_name = format_ident!("{}", pascal_to_upper_snake(&name.to_string()));
     let ffi_name = pascal_to_lower_snake(&name.to_string());
-    let representation = generate_representation(&item, &declaration_fields);
-    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
 
     quote! {
-        #item
+        impl #impl_generics ::eisheth::types::RepresentedAs for #name #ty_generics #where_clause {
+            type RepresentationType = ::eisheth::types::Struct;
 
-        impl #impl_generics #name #ty_generics #where_clause {
-            #visibility fn r#type() -> ::eisheth::types::Struct {
+            fn representation() -> Self::RepresentationType {
                 thread_local! {
                     static #type_static_name : ::eisheth::types::Struct =
                         ::eisheth::types::Struct::new(
@@ -72,10 +86,7 @@ pub fn ffi_struct_inner(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 #type_static_name.with(|x| *x)
             }
         }
-
-        #representation
     }
-    .into()
 }
 
 fn generate_representation(

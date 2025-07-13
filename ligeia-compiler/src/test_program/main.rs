@@ -8,7 +8,7 @@ use eisheth::{
 
 use crate::{
     install_types_initializer,
-    test_program::{exported_globals, side},
+    test_program::{exported_globals, imports, side},
     value,
     vector::{self, ffi::Vector},
 };
@@ -18,6 +18,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let value_definition = value::define(package_builder);
     let value_vector_definition = vector::define(package_builder);
     let exported_globals_definition = exported_globals::define(package_builder);
+    let imports_definition = imports::define(package_builder, &value_definition);
 
     let main_module = package_builder.add_module("main").unwrap();
 
@@ -26,8 +27,14 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
     let value_definition_in_main = value_definition.import_into(main_module);
     let side_definition_in_main = side_definition.import_into(main_module);
     let exported_globals_in_main = exported_globals_definition.import_into(main_module);
+    let imports_in_main = imports_definition.import_into(main_module);
 
-    let types = main_module.define_global(Visibility::Internal, "types", Vector::r#type(), None);
+    let types = main_module.define_global(
+        Visibility::Internal,
+        "types",
+        Vector::representation(),
+        None,
+    );
 
     let type_value: ConstValue = 1u64.into();
     let test_type = main_module.define_global(
@@ -55,7 +62,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
         |function| {
             let entry = function.create_block("entry");
             entry.build(|i| {
-                vector_definition_in_main.finalizer(&i, types);
+                let _ = i.direct_call(vector_definition_in_main.get_finalizer(), &[&types], "");
 
                 i.return_void()
             });
@@ -76,7 +83,7 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
             block.build(|i| {
                 let left: ConstValue = 2u64.into();
                 let right: ConstValue = 11u64.into();
-                let sum = i.add(left, right, "sum");
+                let sum = i.add(&left, &right, "sum");
 
                 i.r#return(sum)
             });
@@ -93,20 +100,24 @@ pub fn define(package_builder: &mut PackageBuilder) -> DeclaredFunctionDescripto
             let entry = function.create_block("entry");
 
             entry.build(|i| {
-                let important_number = exported_globals_in_main.get_important_number(&i);
+                let show_info = imports_in_main.get_show_info();
+                let _ = i.direct_call(show_info, &[], "");
+
+                let important_number = exported_globals_in_main.get_important_number();
                 let base: ConstValue = 32u64.into();
-                let sum = i.add(base, function.get_argument(0).unwrap(), "add");
+                let sum = i.add(&base, &function.get_argument(0).unwrap(), "add");
                 let arg: ConstValue = 2u64.into();
-                let value_from_other = i.direct_call(other, &[arg.into()], "calling_other");
-                let sum2 = i.add(sum, value_from_other, "add_again");
-                let value_from_side = side_definition_in_main.side_fn(&i);
-                let sum3 = i.add(sum2, value_from_side, "cross_module_sum");
+                let value_from_other = i.direct_call(other, &[&arg], "calling_other");
+                let sum2 = i.add(&sum, &value_from_other, "add_again");
+                let value_from_side =
+                    i.direct_call(side_definition_in_main.get_side_fn(), &[], "side_fn");
+                let sum3 = i.add(&sum2, &value_from_side, "cross_module_sum");
                 let important_number_value = i.load(
-                    important_number,
+                    &important_number,
                     important_number.r#type(),
                     "important_number",
                 );
-                let sum4 = i.add(sum3, important_number_value, "imported_global_sum");
+                let sum4 = i.add(&sum3, &important_number_value, "imported_global_sum");
 
                 i.r#return(sum4)
             });

@@ -47,6 +47,7 @@ fn main() {
     println!("Result: {result}");
 }
 
+// TODO move to test_program?
 fn install_types_initializer(
     main_module: &mut ModuleBuilder,
     vector_definition_in_main: &vector::ImportedDefinition,
@@ -67,22 +68,27 @@ fn install_types_initializer(
         |function| {
             let entry = function.create_block("entry");
             entry.build(|i| {
-                vector_definition_in_main.initializer(&i, types, Value::r#type().sizeof());
+                let _ = i.direct_call(
+                    vector_definition_in_main.get_initializer(),
+                    &[&types, &Value::representation().sizeof()],
+                    "",
+                );
 
-                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+                let push_unitialized = vector_definition_in_main.get_push_uninitialized();
+                let initialize_pointer = value_definition_in_main.get_initialize_pointer();
+                let debug_print = value_definition_in_main.get_debug_print();
 
-                value_definition_in_main.debug_print(&i, pointer);
+                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
+                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
+                let _ = i.direct_call(debug_print, &[&pointer], "");
 
-                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
+                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
+                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
+                let _ = i.direct_call(debug_print, &[&pointer], "");
 
-                value_definition_in_main.debug_print(&i, pointer);
-
-                let pointer = vector_definition_in_main.push_uninitialized(&i, types);
-                value_definition_in_main.initialize_pointer(&i, pointer, test_type);
-
-                value_definition_in_main.debug_print(&i, pointer);
+                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
+                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
+                let _ = i.direct_call(debug_print, &[&pointer], "");
 
                 i.return_void()
             });

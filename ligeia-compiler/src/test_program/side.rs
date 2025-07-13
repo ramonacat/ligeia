@@ -25,8 +25,8 @@ mod builder {
         let right: ConstValue = 32u64.into();
 
         block.build(|i| {
-            i.store(number, right);
-            let sum = i.add(input, right, "sum");
+            i.store(&number, &right);
+            let sum = i.add(&input, &right, "sum");
 
             i.r#return(sum)
         });
@@ -41,9 +41,9 @@ mod builder {
 
         let result: ConstValue = 7u64.into();
         block.build(|i| {
-            let sum = i.direct_call(secret, &[result.into()], "sum");
-            let number = i.load(number, number.r#type(), "number");
-            let sum2 = i.add(sum, number, "sum2");
+            let sum = i.direct_call(secret, &[&result], "sum");
+            let number = i.load(&number, number.r#type(), "number");
+            let sum2 = i.add(&sum, &number, "sum2");
 
             i.r#return(sum2)
         });

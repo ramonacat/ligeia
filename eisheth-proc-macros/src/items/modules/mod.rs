@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Ident, parse_macro_input};
+use syn::{Ident, Path, parse_macro_input};
 
 use crate::items::modules::{
     functions::{make_module_function_caller, make_module_function_definition},
@@ -81,6 +81,7 @@ fn make_definition_struct<'a>(
 fn make_define_function<'a>(
     module_name: &Ident,
     items: impl Iterator<Item = &'a Item> + Clone,
+    imports: impl Iterator<Item = &'a Path> + Clone,
 ) -> proc_macro2::TokenStream {
     let name_str = module_name.to_string();
 
@@ -100,9 +101,25 @@ fn make_define_function<'a>(
         grammar::ItemKind::GlobalFinalizer(gfd) => make_global_finalizer(gfd),
     });
 
+    let imported_arguments = imports.clone().map(|x| {
+        let name = &x.segments.last().unwrap().ident;
+
+        quote! { #name : &#x::Definition }
+    });
+
+    let import_definitions = imports.map(|x| {
+        let name = &x.segments.last().unwrap().ident;
+
+        quote! { let #name = #name.import_into(&mut module); }
+    });
+
     quote! {
-        pub fn define(package_builder: &mut ::eisheth::package::builder::PackageBuilder) -> Definition {
-            let module = package_builder.add_module(#name_str).unwrap();
+        pub fn define(
+            package_builder: &mut ::eisheth::package::builder::PackageBuilder,
+            #(#imported_arguments),*
+        ) -> Definition {
+            let mut module = package_builder.add_module(#name_str).unwrap();
+            #(#import_definitions);*
             #(#item_definitions);*
 
             Definition {
@@ -122,7 +139,7 @@ fn make_imported_definition_struct<'a>(
             .filter_map(|x| match &x.kind {
                 grammar::ItemKind::Function(f) => {
                     // TODO just pass f as an argument
-                    Some(make_module_function_caller(&f.name, &f.kind))
+                    Some(make_module_function_caller(&f.name))
                 }
                 grammar::ItemKind::Global(g) => Some(make_global_getter(g)),
                 grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => {
@@ -163,7 +180,14 @@ pub fn define_module_inner(tokens: TokenStream) -> TokenStream {
     let content = parse_macro_input!(tokens as DefineModuleInput);
 
     let definition_struct = make_definition_struct(content.items.iter());
-    let define_function = make_define_function(&content.name, content.items.iter());
+    let define_function = make_define_function(
+        &content.name,
+        content.items.iter(),
+        content
+            .imported_modules
+            .iter()
+            .flat_map(|x| x.imports.iter()),
+    );
     let imported_defintion_struct = make_imported_definition_struct(content.items.iter());
 
     quote! {
