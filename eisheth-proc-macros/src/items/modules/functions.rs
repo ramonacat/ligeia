@@ -3,15 +3,15 @@ use quote::{format_ident, quote};
 use syn::{Ident, ReturnType};
 
 use crate::items::modules::grammar::{
-    self, FunctionArgument, FunctionDefinitionKind, FunctionSignature, Visibility,
+    self, FunctionArgument, FunctionDefinition, FunctionDefinitionKind, FunctionSignature, Visibility
 };
 
-pub fn make_module_function_definition(
+pub fn make_function_definition(
     visibility: Visibility,
-    name: &Ident,
-    definition: &FunctionDefinitionKind,
+    function: &FunctionDefinition
 ) -> proc_macro2::TokenStream {
-    match &definition {
+    let name = &function.name;
+    match &function.kind {
         FunctionDefinitionKind::Runtime(f) => {
             let argument_types = f
                 .signature
@@ -98,8 +98,9 @@ pub fn make_module_function_definition(
     }
 }
 
-pub fn make_module_function_caller(name: &Ident) -> proc_macro2::TokenStream {
-    let getter_name = format_ident!("get_{name}");
+pub fn make_function_getter(function: &FunctionDefinition) -> proc_macro2::TokenStream {
+    let name = &function.name;
+    let getter_name = format_ident!("get_{}", name);
 
     quote! {
         pub fn #getter_name<'module>(

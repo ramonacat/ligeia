@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{Ident, Path, parse_macro_input};
 
 use crate::items::modules::{
-    functions::{make_module_function_caller, make_module_function_definition},
+    functions::{make_function_getter, make_function_definition},
     global_finalizers::make_global_finalizer,
     global_initializers::make_global_initializer,
     globals::{make_global_declaration, make_global_getter},
@@ -100,8 +100,7 @@ fn make_define_function<'a>(
 
     let item_definitions = items.map(|x| match &x.kind {
         grammar::ItemKind::Function(f) => {
-            // TODO pass &f as a whole instead of name and contents separately
-            make_module_function_definition(x.visibility, &f.name, &f.kind)
+            make_function_definition(x.visibility, &f)
         }
         grammar::ItemKind::Global(g) => make_global_declaration(x.visibility, g),
         grammar::ItemKind::GlobalInitializer(gid) => make_global_initializer(gid),
@@ -145,8 +144,7 @@ fn make_imported_definition_struct<'a>(
             .filter(|x| x.is_exported())
             .filter_map(|x| match &x.kind {
                 grammar::ItemKind::Function(f) => {
-                    // TODO just pass f as an argument
-                    Some(make_module_function_caller(&f.name))
+                    Some(make_function_getter(&f))
                 }
                 grammar::ItemKind::Global(g) => Some(make_global_getter(g)),
                 grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => {
