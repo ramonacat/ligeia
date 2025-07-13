@@ -3,12 +3,13 @@ use quote::{format_ident, quote};
 use syn::{Ident, ReturnType};
 
 use crate::items::modules::grammar::{
-    self, FunctionArgument, FunctionDefinition, FunctionDefinitionKind, FunctionSignature, Visibility
+    self, FunctionArgument, FunctionDefinition, FunctionDefinitionKind, FunctionSignature,
+    Visibility,
 };
 
 pub fn make_function_definition(
     visibility: Visibility,
-    function: &FunctionDefinition
+    function: &FunctionDefinition,
 ) -> proc_macro2::TokenStream {
     let name = &function.name;
     match &function.kind {

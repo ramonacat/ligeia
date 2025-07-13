@@ -2,8 +2,6 @@ use std::{error::Error, fmt::Display};
 
 use thiserror::Error;
 
-use crate::module::DeclaredFunctionDescriptor;
-
 #[derive(Debug)]
 pub struct ModuleBuildError {
     pub(super) module_name: String,
@@ -33,9 +31,9 @@ impl Display for ModuleBuildError {
 impl Error for ModuleBuildError {}
 
 #[derive(Debug, Error)]
-pub enum FunctionImportError {
-    #[error("Function {0:?} is not exported")]
-    NotExported(DeclaredFunctionDescriptor),
-    #[error("Function {0:?} cannot be imported into the same module where it was defined")]
-    DefinedInThisModule(DeclaredFunctionDescriptor),
+pub enum ImportError {
+    #[error("{0} is not exported")]
+    NotExported(String),
+    #[error("{0} cannot be imported into the same module where it was defined")]
+    DefinedInThisModule(String),
 }

@@ -7,7 +7,10 @@ use llvm_sys::{
 
 use crate::{
     Visibility,
-    module::{DeclaredGlobalDescriptor, builder::ModuleBuilder},
+    module::{
+        DeclaredGlobalDescriptor,
+        builder::{ModuleBuilder, errors::ImportError},
+    },
     types::Type,
     value::{ConstValue, Value},
 };
@@ -56,10 +59,16 @@ pub fn define_global<T: Type>(
 pub fn import_global(
     module: &ModuleBuilder,
     id: DeclaredGlobalDescriptor,
-) -> (DeclaredGlobalDescriptor, LLVMValueRef) {
-    // TODO Return a Result instead
-    assert!(module.id != id.module_id);
-    assert!(id.visibility == Visibility::Export);
+) -> Result<(DeclaredGlobalDescriptor, LLVMValueRef), ImportError> {
+    if module.id == id.module_id {
+        return Err(ImportError::DefinedInThisModule(
+            module.symbols.resolve(id.name),
+        ));
+    }
+
+    if id.visibility != Visibility::Export {
+        return Err(ImportError::NotExported(module.symbols.resolve(id.name)));
+    }
 
     let name = module.symbols.resolve(id.name);
     let c_name = CString::from_str(&name).unwrap();
@@ -75,5 +84,5 @@ pub fn import_global(
         visibility: Visibility::Internal,
     };
 
-    (id, global)
+    Ok((id, global))
 }

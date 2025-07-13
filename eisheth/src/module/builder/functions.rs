@@ -7,7 +7,7 @@ use crate::{
     function::{builder::FunctionBuilder, declaration::FunctionSignature},
     module::{
         DeclaredFunctionDescriptor,
-        builder::{FunctionImportError, ModuleBuilder},
+        builder::{ImportError, ModuleBuilder},
     },
     types::Type as _,
 };
@@ -59,13 +59,15 @@ pub fn declare_function(
 pub fn import_function(
     module: &ModuleBuilder,
     id: DeclaredFunctionDescriptor,
-) -> Result<(DeclaredFunctionDescriptor, LLVMValueRef), FunctionImportError> {
+) -> Result<(DeclaredFunctionDescriptor, LLVMValueRef), ImportError> {
     if id.module_id == module.id {
-        return Err(FunctionImportError::DefinedInThisModule(id));
+        return Err(ImportError::DefinedInThisModule(
+            module.symbols.resolve(id.name),
+        ));
     }
 
     if id.visibility != Visibility::Export {
-        return Err(FunctionImportError::NotExported(id));
+        return Err(ImportError::NotExported(module.symbols.resolve(id.name)));
     }
 
     let name = module.symbols.resolve(id.name);

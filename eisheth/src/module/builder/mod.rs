@@ -5,7 +5,7 @@ use crate::{
     module::{
         AnyModule, AnyModuleExtensions, DeclaredGlobalDescriptor, GlobalReference,
         builder::{
-            errors::{FunctionImportError, ModuleBuildError},
+            errors::{ImportError, ModuleBuildError},
             global_finalizers::{
                 FinalizersEntryType, GLOBAL_FINALIZERS_ENTRY_TYPE, GlobalFinalizerDescriptor,
             },
@@ -170,7 +170,7 @@ impl ModuleBuilder {
     pub fn import_function(
         &mut self,
         id: DeclaredFunctionDescriptor,
-    ) -> Result<DeclaredFunctionDescriptor, FunctionImportError> {
+    ) -> Result<DeclaredFunctionDescriptor, ImportError> {
         let (id, function) = functions::import_function(self, id)?;
 
         self.function_values.insert(id, function);
@@ -178,12 +178,18 @@ impl ModuleBuilder {
         Ok(id)
     }
 
-    pub fn import_global(&mut self, id: DeclaredGlobalDescriptor) -> DeclaredGlobalDescriptor {
-        let (id, global) = globals::import_global(self, id);
+    /// # Errors
+    /// Will return an error if the global is defined in this module, or it's not exported
+    /// from the other module.
+    pub fn import_global(
+        &mut self,
+        id: DeclaredGlobalDescriptor,
+    ) -> Result<DeclaredGlobalDescriptor, ImportError> {
+        let (id, global) = globals::import_global(self, id)?;
 
         self.global_values.insert(id, global);
 
-        id
+        Ok(id)
     }
 
     pub(crate) fn build(mut self) -> Result<(String, Module), ModuleBuildError> {

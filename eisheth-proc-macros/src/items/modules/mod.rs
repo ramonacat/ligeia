@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{Ident, Path, parse_macro_input};
 
 use crate::items::modules::{
-    functions::{make_function_getter, make_function_definition},
+    functions::{make_function_definition, make_function_getter},
     global_finalizers::make_global_finalizer,
     global_initializers::make_global_initializer,
     globals::{make_global_declaration, make_global_getter},
@@ -45,7 +45,7 @@ fn make_definition_struct<'a>(
             grammar::ItemKind::Global(g) => {
                 let name = &g.name;
 
-                Some(quote! { let #name = module.import_global(self.#name); })
+                Some(quote! { let #name = module.import_global(self.#name).unwrap(); })
             }
             grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
         });
@@ -99,9 +99,7 @@ fn make_define_function<'a>(
     });
 
     let item_definitions = items.map(|x| match &x.kind {
-        grammar::ItemKind::Function(f) => {
-            make_function_definition(x.visibility, &f)
-        }
+        grammar::ItemKind::Function(f) => make_function_definition(x.visibility, f),
         grammar::ItemKind::Global(g) => make_global_declaration(x.visibility, g),
         grammar::ItemKind::GlobalInitializer(gid) => make_global_initializer(gid),
         grammar::ItemKind::GlobalFinalizer(gfd) => make_global_finalizer(gfd),
@@ -143,9 +141,7 @@ fn make_imported_definition_struct<'a>(
             .clone()
             .filter(|x| x.is_exported())
             .filter_map(|x| match &x.kind {
-                grammar::ItemKind::Function(f) => {
-                    Some(make_function_getter(&f))
-                }
+                grammar::ItemKind::Function(f) => Some(make_function_getter(f)),
                 grammar::ItemKind::Global(g) => Some(make_global_getter(g)),
                 grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => {
                     None
