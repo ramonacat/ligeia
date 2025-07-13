@@ -1,4 +1,4 @@
-use std::{ffi::CString, str::FromStr as _};
+use std::{ffi::CString, marker::PhantomData, str::FromStr as _};
 
 use llvm_sys::{
     LLVMLinkage,
@@ -15,20 +15,19 @@ use crate::{
 };
 
 pub struct FunctionReference<'module> {
-    // TODO should this be PhantomData instead? we only care about the lifetime ATM
-    _module: &'module dyn AnyModule,
+    _module: PhantomData<&'module dyn AnyModule>,
     reference: LLVMValueRef,
     r#type: types::Function,
 }
 
 impl<'module> FunctionReference<'module> {
     pub(crate) unsafe fn new(
-        module: &'module dyn AnyModule,
+        _module: &'module dyn AnyModule,
         reference: LLVMValueRef,
         r#type: types::Function,
     ) -> Self {
         Self {
-            _module: module,
+            _module: PhantomData,
             reference,
             r#type,
         }

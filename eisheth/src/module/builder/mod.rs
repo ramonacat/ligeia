@@ -101,7 +101,6 @@ impl ModuleBuilder {
         self.reference
     }
 
-    // TODO: some cute macro so that these functions are easier to define?
     /// # Panics
     /// Will panic if the name cannot be converted into a c-string.
     /// # Safety
@@ -121,7 +120,6 @@ impl ModuleBuilder {
         id
     }
 
-    // TODO: some cute macro so that these functions are easier to define?
     pub fn define_function(
         &mut self,
         declaration: &FunctionSignature,
