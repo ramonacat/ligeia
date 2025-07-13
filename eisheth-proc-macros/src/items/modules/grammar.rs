@@ -1,5 +1,5 @@
 use syn::{
-    BareFnArg, Ident, LitInt, Path, ReturnType, Token, Type, braced, parenthesized,
+    BareFnArg, Ident, Lit, LitInt, Path, ReturnType, Token, Type, braced, parenthesized,
     parse::Parse,
     punctuated::Punctuated,
     token::{Brace, Caret, Colon, Comma, Dot, Paren},
@@ -151,6 +151,7 @@ pub struct GlobalDeclaration {
     pub name: Ident,
     pub _colon: Colon,
     pub r#type: Type,
+    pub value: Option<(Token![=], Lit)>,
 }
 
 impl Parse for GlobalDeclaration {
@@ -160,6 +161,15 @@ impl Parse for GlobalDeclaration {
             name: input.parse()?,
             _colon: input.parse()?,
             r#type: input.parse()?,
+            value: {
+                let lookahead = input.lookahead1();
+
+                if lookahead.peek(Token![=]) {
+                    Some((input.parse()?, input.parse()?))
+                } else {
+                    None
+                }
+            },
         })
     }
 }

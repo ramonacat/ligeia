@@ -1,10 +1,3 @@
-use eisheth::{
-    function::declaration::{FunctionSignature, Visibility},
-    module::{DeclaredGlobalDescriptor, builder::ModuleBuilder},
-    types::{self, RepresentedAs, TypeExtensions},
-    value::ConstOrDynamicValue,
-};
-
 mod test_program;
 mod value;
 mod vector;
@@ -14,12 +7,25 @@ use eisheth::{
     package::builder::PackageBuilder,
 };
 
-use crate::value::ffi::Value;
-
 fn main() {
     let mut package_builder = PackageBuilder::new();
 
-    let main_function = test_program::main::define(&mut package_builder);
+    let side = test_program::side::define(&mut package_builder);
+    let value = value::define(&mut package_builder);
+    let vector = vector::define(&mut package_builder);
+    let exported_globals = test_program::exported_globals::define(&mut package_builder);
+    let imports = test_program::imports::define(&mut package_builder, &value);
+
+    let main_function = test_program::main::define(
+        &mut package_builder,
+        &side,
+        &value,
+        &vector,
+        &exported_globals,
+        &imports,
+    )
+    .into_freestanding()
+    .get_main();
 
     let package = match package_builder.build() {
         Ok(package) => package,
@@ -45,54 +51,4 @@ fn main() {
     let result = unsafe { callable.call(12) };
 
     println!("Result: {result}");
-}
-
-// TODO move to test_program?
-fn install_types_initializer(
-    main_module: &mut ModuleBuilder,
-    vector_definition_in_main: &vector::ImportedDefinition,
-    value_definition_in_main: &value::ImportedDefinition,
-    types: DeclaredGlobalDescriptor,
-    test_type: DeclaredGlobalDescriptor,
-) {
-    let types: ConstOrDynamicValue = main_module.get_global(types).into();
-    let test_type: ConstOrDynamicValue = main_module.get_global(test_type).into();
-
-    // TODO we should be pointing to the initialized data here (i.e. None should be Some(types))
-    let types_initializer = main_module.define_function(
-        &FunctionSignature::new(
-            "types_initializer",
-            types::Function::new(<() as RepresentedAs>::representation(), &[]),
-            Visibility::Export,
-        ),
-        |function| {
-            let entry = function.create_block("entry");
-            entry.build(|i| {
-                let _ = i.direct_call(
-                    vector_definition_in_main.get_initializer(),
-                    &[&types, &Value::representation().sizeof()],
-                    "",
-                );
-
-                let push_unitialized = vector_definition_in_main.get_push_uninitialized();
-                let initialize_pointer = value_definition_in_main.get_initialize_pointer();
-                let debug_print = value_definition_in_main.get_debug_print();
-
-                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
-                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
-                let _ = i.direct_call(debug_print, &[&pointer], "");
-
-                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
-                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
-                let _ = i.direct_call(debug_print, &[&pointer], "");
-
-                let pointer = i.direct_call(push_unitialized, &[&types], "pointer");
-                let _ = i.direct_call(initialize_pointer, &[&pointer, &test_type], "");
-                let _ = i.direct_call(debug_print, &[&pointer], "");
-
-                i.return_void()
-            });
-        },
-    );
-    main_module.define_global_initializer(0, None, types_initializer);
 }

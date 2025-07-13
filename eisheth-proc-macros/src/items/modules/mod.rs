@@ -57,6 +57,7 @@ fn make_definition_struct<'a>(
             grammar::ItemKind::Global(g) => Some(&g.name),
             grammar::ItemKind::GlobalInitializer(_) | grammar::ItemKind::GlobalFinalizer(_) => None,
         });
+    let imported_item_names_ = imported_item_names.clone();
 
     quote! {
         pub struct Definition {
@@ -72,6 +73,12 @@ fn make_definition_struct<'a>(
 
                 ImportedDefinition {
                     #(#imported_item_names),*
+                }
+            }
+
+            pub fn into_freestanding(self) -> ImportedDefinition {
+                ImportedDefinition {
+                    #(#imported_item_names_: self.#imported_item_names_),*
                 }
             }
         }
