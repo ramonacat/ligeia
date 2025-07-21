@@ -102,6 +102,8 @@ fn compile_function_body(
                     Statement::Return(expression) => {
                         let result = compile_expression(expression);
                         block.build(|mut i| {
+                            // TOOO: verify that the type matches the function's return type
+                            // TODO: verify that all code paths return a value
                             let result = result(&mut i, &mut locals);
 
                             i.r#return(result)
@@ -115,6 +117,9 @@ fn compile_function_body(
 
 type ExpressionBuilder = dyn Fn(
     &mut InstructionBuilder,
+    // TODO: make this a struct Locals, keep types along with the values
+    // TODO: the values should have variants for read-only (like function arguments) and read-write, first being the direct
+    // value, second being a pointer to the backing storage
     &mut HashMap<Identifier, ConstOrDynamicValue>,
 ) -> ConstOrDynamicValue;
 

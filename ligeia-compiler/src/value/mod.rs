@@ -22,7 +22,8 @@ mod runtime {
     }
 
     pub(super) unsafe extern "C" fn debug_print(value: *mut Value) {
-        // SAFETY: It's caller's responsibility to provide a valid pointer
+        // SAFETY: It's caller's responsibility to provide a valid pointer, the cast is correct
+        // because PointerValue is repr(transparent) with a Value inside
         if let Some(pointer) = unsafe { PointerValue::ptr_from(value) } {
             // SAFETY: It's caller's responsibility to provide a valid pointer
             let value = unsafe { &mut *pointer };
