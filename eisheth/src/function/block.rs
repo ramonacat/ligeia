@@ -7,12 +7,15 @@ use super::{
     instruction_builder::{InstructionBuilder, TerminatorToken},
 };
 
+#[must_use]
 pub struct FunctionBlock<'module> {
     function_builder: &'module FunctionBuilder<'module>,
     block: *mut llvm_sys::LLVMBasicBlock,
 }
 
 impl<'module> FunctionBlock<'module> {
+    /// # Panics
+    /// This function will panic if the name cannot be converted into a `CString`
     pub fn new(function_builder: &'module FunctionBuilder<'module>, name: &str) -> Self {
         let name = CString::from_str(name).unwrap();
         // SAFETY: we know the function is a valid ref and name is a valid null-terminated C-string

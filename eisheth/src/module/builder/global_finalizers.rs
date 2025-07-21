@@ -12,7 +12,7 @@ use crate::{
 
 thread_local! {
     pub(super) static GLOBAL_FINALIZERS_ENTRY_TYPE: FinalizersEntryType = FinalizersEntryType::new();
-    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
+    pub(super) static GLOBAL_FINALIZER_TYPE: types::Function = types::Function::new(<()>::representation().into(), &[]);
 }
 
 pub(super) struct GlobalFinalizerDescriptor {

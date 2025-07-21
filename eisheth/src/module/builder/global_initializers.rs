@@ -12,7 +12,7 @@ use crate::{
 
 thread_local! {
     pub(super) static GLOBAL_INITIALIZERS_ENTRY_TYPE: InitializersEntryType = InitializersEntryType::new();
-    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(<()>::representation(), &[]);
+    pub(super) static GLOBAL_INITIALIZER_TYPE: types::Function = types::Function::new(<()>::representation().into(), &[]);
 }
 
 pub(super) struct GlobalInitializerDescriptor {

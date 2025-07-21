@@ -26,7 +26,7 @@ impl Function {
     /// # Panics
     /// If there are more params for the function than an u32 can hold. If this happens, you might
     /// want to consider refactoring your code.
-    pub fn new<TReturn: Type>(r#return: TReturn, arguments: &[OpaqueType]) -> Self {
+    pub fn new(r#return: OpaqueType, arguments: &[OpaqueType]) -> Self {
         let mut param_types: Vec<_> = arguments.iter().map(OpaqueType::as_llvm_ref).collect();
 
         Self {

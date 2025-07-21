@@ -82,7 +82,6 @@ impl<'module> FunctionBuilder<'module> {
         }
     }
 
-    #[must_use]
     pub fn create_block(&'module self, name: &str) -> FunctionBlock<'module> {
         FunctionBlock::new(self, name)
     }

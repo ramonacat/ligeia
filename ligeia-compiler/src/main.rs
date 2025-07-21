@@ -1,4 +1,6 @@
+mod compiler;
 mod ir;
+mod parser;
 mod test_program;
 mod value;
 mod vector;
@@ -9,6 +11,28 @@ use eisheth::{
 };
 
 fn main() {
+    let result = parser::parse(
+        "main.lig",
+        "fn main(input: u64) -> u64 { return input + 1024; }",
+    );
+    println!("{result:?}");
+
+    let program = compiler::compile(vec![result]);
+
+    let main = program.main();
+    let package = program.into_package();
+
+    ir::print_to_files("compiled", &package);
+
+    let jit = Jit::new(package).unwrap();
+
+    // SAFETY: The function signature matches the one declared in our program
+    let main = unsafe { jit.get_function::<unsafe extern "C" fn(u64) -> u64>(main) };
+    // SAFETY: The function signature is right, and the compiled code should be memory-safe
+    let result = unsafe { main.call(1024) };
+
+    println!("Result: {result}");
+
     let mut package_builder = PackageBuilder::new();
 
     let side = test_program::side::define(&mut package_builder);
@@ -45,7 +69,7 @@ fn main() {
         }
     };
 
-    ir::print_to_files(&package);
+    ir::print_to_files("built", &package);
 
     let jit = Jit::new(package).unwrap();
 

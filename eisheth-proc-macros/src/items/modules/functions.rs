@@ -148,7 +148,7 @@ fn make_function_signature(
         ::eisheth::function::declaration::FunctionSignature::new(
             #name_str,
             ::eisheth::types::Function::new(
-                <(#return_type) as ::eisheth::types::RepresentedAs>::representation(),
+                <(#return_type) as ::eisheth::types::RepresentedAs>::representation().into(),
                 &[
                     #(<(#arguments) as ::eisheth::types::RepresentedAs>::representation().into()),*
                 ],

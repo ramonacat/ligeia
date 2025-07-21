@@ -1,0 +1,62 @@
+use super::ast;
+
+grammar(filename: &str);
+
+Identifier: ast::Identifier = {
+    r"\p{ID_Start}\p{ID_Continue}*" => ast::Identifier(<>.to_string()),
+}
+
+Type: ast::Type = {
+    "(" ")" => ast::Type::Unit,
+    "u64" => ast::Type::U64,
+}
+
+Argument: ast::Argument = {
+    <name:Identifier> ":" <r#type:Type> => ast::Argument { name, r#type }
+}
+
+Arguments: Vec<ast::Argument> = {
+    <l:Argument> => vec![l],
+    <mut l:Arguments> "," <r:Argument> => {
+        l.push(r);
+        
+        l
+    }
+}
+
+Literal: ast::Literal = {
+    <value:r"[1-9][0-9]*"> => ast::Literal::UnsignedInteger(value.parse().unwrap()),
+}
+
+Expression: ast::Expression = {
+    #[precedence(level = "0")]
+    <literal:Literal> => ast::Expression::Literal(literal),
+    <variable:Identifier> => ast::Expression::VariableReference(variable),
+
+    #[precedence(level = "1")] #[assoc(side = "left")]
+    <left:Expression> "+" <right:Expression> => ast::Expression::Sum(Box::new(left), Box::new(right))
+}
+
+Statement: ast::Statement = {
+    <expression:Expression> ";" => ast::Statement::Expression(expression),
+    "return" <expression:Expression> ";" => ast::Statement::Return(expression),
+}
+
+FunctionBody: ast::FunctionBody = {
+    <statements:Statement*> => ast::FunctionBody::Statements(statements),
+    "extern" "(" <external_name:Identifier> ")" ";" => ast::FunctionBody::Extern(external_name),
+}
+
+Function: ast::Function = {
+    "fn" <name:Identifier> "(" <arguments:Arguments> ","? ")" <return_type:("->" <Type>)?> "{" <body:FunctionBody> "}" => {
+        ast::Function { name, arguments, return_type: return_type.unwrap_or(ast::Type::Unit), body }
+    }
+}
+
+Declaration: ast::Declaration = {
+    <function:Function> => ast::Declaration::Function(function)
+}
+
+pub SourceFile: ast::SourceFile = {
+    <declarations:Declaration*> => ast::SourceFile { name: filename.to_string(), declarations }
+}
