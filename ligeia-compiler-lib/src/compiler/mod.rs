@@ -11,6 +11,7 @@ use eisheth::{
 
 use crate::parser::ast::{self, Expression, FunctionBody, Identifier, SourceFile, Statement};
 
+#[must_use]
 pub struct CompiledProgram {
     package: Package,
     main: DeclaredFunctionDescriptor,
@@ -26,6 +27,10 @@ impl CompiledProgram {
     }
 }
 
+/// # Panics
+/// Will panic if the program fails to compile
+///
+/// TODO: Return readable compile errors
 pub fn compile(files: Vec<SourceFile>) -> CompiledProgram {
     let mut package_builder = PackageBuilder::new();
 
@@ -63,7 +68,7 @@ fn compile_file(
                 let function_id = module.define_function(
                     &FunctionSignature::new(
                         function.name.0.clone(),
-                        make_function_type(&function.return_type, &function.arguments),
+                        make_function_type(function.return_type, &function.arguments),
                         Visibility::Export,
                     ),
                     |f| {
@@ -149,17 +154,17 @@ fn compile_expression(expression: Expression) -> Box<ExpressionBuilder> {
     }
 }
 
-fn make_function_type(return_type: &ast::Type, arguments: &[ast::Argument]) -> types::Function {
+fn make_function_type(return_type: ast::Type, arguments: &[ast::Argument]) -> types::Function {
     types::Function::new(
         make_type(return_type),
         &arguments
             .iter()
-            .map(|t| make_type(&t.r#type))
+            .map(|t| make_type(t.r#type))
             .collect::<Vec<_>>(),
     )
 }
 
-fn make_type(return_type: &ast::Type) -> OpaqueType {
+fn make_type(return_type: ast::Type) -> OpaqueType {
     match return_type {
         ast::Type::Unit => <()>::representation().into(),
         ast::Type::U64 => u64::representation().into(),

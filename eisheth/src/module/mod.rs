@@ -44,6 +44,7 @@ impl<T: AnyModule> AnyModuleExtensions for T {
 pub struct ModuleId(PackageId, GlobalSymbol);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[must_use]
 pub struct DeclaredFunctionDescriptor {
     module_id: ModuleId,
     name: GlobalSymbol,

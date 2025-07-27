@@ -7,6 +7,7 @@ use std::{collections::HashMap, rc::Rc};
 use super::{global_symbol::GlobalSymbols, module::built::Module};
 use crate::module::AnyModuleExtensions;
 
+#[must_use]
 pub struct Package {
     module: Module,
     ir_per_module: HashMap<String, String>,

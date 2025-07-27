@@ -61,7 +61,6 @@ impl PackageBuildResult {
         &self.messages
     }
 
-    #[must_use]
     pub fn into_package(self) -> Package {
         self.package
     }

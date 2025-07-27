@@ -17,12 +17,15 @@ lalrpop_util::lalrpop_mod!(
         clippy::unnested_or_patterns,
         clippy::match_same_arms
     )]
-    pub grammar,
+    grammar,
     "/parser/grammar.rs"
 );
 
+/// # Panics
+/// Will panic in case the file fails to parse
+///
+/// TODO return readable parse errors to the user
 pub fn parse(filename: &str, code: &str) -> ast::SourceFile {
-    // TODO error handling
     grammar::SourceFileParser::new()
         .parse(filename, code)
         .unwrap()

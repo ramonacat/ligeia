@@ -1,12 +1,24 @@
 #![allow(unused, dead_code)]
 
+use std::fmt::Display;
+
+// TODO: intern the IDs, and make this Copy
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Identifier(pub String);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Unit,
     U64,
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unit => write!(f, "()"),
+            Self::U64 => write!(f, "u64"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -55,6 +67,7 @@ pub enum Declaration {
 }
 
 #[derive(Debug)]
+#[must_use]
 pub struct SourceFile {
     pub declarations: Vec<Declaration>,
     pub name: String,

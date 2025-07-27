@@ -1,6 +1,4 @@
-mod compiler;
 mod ir;
-mod parser;
 mod test_program;
 mod value;
 mod vector;
@@ -9,6 +7,7 @@ use eisheth::{
     jit::{Jit, function::JitFunction},
     package::builder::PackageBuilder,
 };
+use ligeia_compiler_lib::{analysis::analyse, compiler, parser};
 
 fn main() {
     let result = parser::parse(
@@ -17,7 +16,11 @@ fn main() {
     );
     println!("{result:?}");
 
-    let program = compiler::compile(vec![result]);
+    let files = vec![result];
+
+    analyse(&files).unwrap();
+
+    let program = compiler::compile(files);
 
     let main = program.main();
     let package = program.into_package();
