@@ -28,9 +28,8 @@ impl CompiledProgram {
 }
 
 /// # Panics
-/// Will panic if the program fails to compile
-///
-/// TODO: Return readable compile errors
+/// Will panic if the program fails to compile. This means a bug in the compiler, as all not
+/// well-formed programs should be declined at the analysis stage.
 pub fn compile(files: Vec<SourceFile>) -> CompiledProgram {
     let mut package_builder = PackageBuilder::new();
 
