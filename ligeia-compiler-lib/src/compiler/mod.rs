@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use eisheth::{
-    Visibility,
     function::{declaration::FunctionSignature, instruction_builder::InstructionBuilder},
     module::DeclaredFunctionDescriptor,
     package::{Package, builder::PackageBuilder},
@@ -68,7 +67,7 @@ fn compile_file(
                     &FunctionSignature::new(
                         function.name.0.clone(),
                         make_function_type(function.return_type, &function.arguments),
-                        Visibility::Export,
+                        function.visibility.into(),
                     ),
                     |f| {
                         compile_function_body(function, f);

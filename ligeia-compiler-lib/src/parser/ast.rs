@@ -21,6 +21,22 @@ impl Display for Type {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Visibility {
+    Export,
+    #[default]
+    Internal,
+}
+
+impl From<Visibility> for eisheth::Visibility {
+    fn from(val: Visibility) -> Self {
+        match val {
+            Visibility::Export => Self::Export,
+            Visibility::Internal => Self::Internal,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Literal {
     // TODO support u128???
@@ -59,6 +75,7 @@ pub struct Function {
     pub arguments: Vec<Argument>,
     pub return_type: Type,
     pub body: FunctionBody,
+    pub visibility: Visibility,
 }
 
 #[derive(Debug)]

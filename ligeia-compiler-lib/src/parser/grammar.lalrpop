@@ -11,6 +11,11 @@ Type: ast::Type = {
     "u64" => ast::Type::U64,
 }
 
+Visibility: ast::Visibility = {
+    "internal" => ast::Visibility::Internal,
+    "export" => ast::Visibility::Export,
+}
+
 Argument: ast::Argument = {
     <name:Identifier> ":" <r#type:Type> => ast::Argument { name, r#type }
 }
@@ -48,8 +53,14 @@ FunctionBody: ast::FunctionBody = {
 }
 
 Function: ast::Function = {
-    "fn" <name:Identifier> "(" <arguments:Arguments?> ","? ")" <return_type:("->" <Type>)?> "{" <body:FunctionBody> "}" => {
-        ast::Function { name, arguments: arguments.unwrap_or_default(), return_type: return_type.unwrap_or(ast::Type::Unit), body }
+    <visibility:Visibility?> "fn" <name:Identifier> "(" <arguments:Arguments?> ","? ")" <return_type:("->" <Type>)?> "{" <body:FunctionBody> "}" => {
+        ast::Function { 
+            name,
+            arguments: arguments.unwrap_or_default(),
+            return_type: return_type.unwrap_or(ast::Type::Unit),
+            body,
+            visibility: visibility.unwrap_or_default()
+        }
     }
 }
 
